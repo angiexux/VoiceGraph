@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceGraph — NYC Build With AI Hackathon</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #09090b;
+    --surface: #18181b;
+    --border: #27272a;
+    --text: #fafafa;
+    --muted: #a1a1aa;
+    --dim: #71717a;
+    --amber: #f59e0b;
+    --emerald: #34d399;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --rose: #fb7185;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .deck {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 120px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .slide.active {
+    display: flex;
+    opacity: 1;
+  }
+
+  /* Navigation */
+  .nav {
+    position: fixed;
+    bottom: 32px;
+    right: 40px;
+    display: flex;
+    gap: 12px;
+    z-index: 100;
+    align-items: center;
+  }
+
+  .nav button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .nav button:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  .slide-counter {
+    color: var(--dim);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Progress bar */
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--amber);
+    transition: width 0.4s ease;
+    z-index: 100;
+  }
+
+  /* Typography */
+  h1 {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 24px;
+  }
+
+  h2 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 16px;
+  }
+
+  .subtitle {
+    font-size: 22px;
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 700px;
+  }
+
+  .big-stat {
+    font-size: 72px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+
+  .label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--amber);
+    margin-bottom: 12px;
+  }
+
+  /* Accent colors */
+  .amber { color: var(--amber); }
+  .emerald { color: var(--emerald); }
+  .blue { color: var(--blue); }
+  .purple { color: var(--purple); }
+  .rose { color: var(--rose); }
+  .muted { color: var(--muted); }
+  .dim { color: var(--dim); }
+
+  /* Layout helpers */
+  .columns { display: flex; gap: 60px; align-items: flex-start; }
+  .col { flex: 1; }
+  .col-wide { flex: 1.5; }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    margin-top: 40px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+
+  .card h3 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  .card p {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .card .icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  /* Lists */
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  ul li {
+    padding: 10px 0;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--muted);
+    position: relative;
+    padding-left: 24px;
+  }
+
+  ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 18px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  /* Architecture diagram */
+  .arch-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    text-align: center;
+    position: relative;
+  }
+
+  .arch-box .box-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+    margin-bottom: 6px;
+  }
+
+  .arch-box .box-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .arch-box .box-detail {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .arch-connector {
+    text-align: center;
+    color: var(--dim);
+    font-size: 20px;
+    padding: 6px 0;
+  }
+
+  /* Pipeline steps */
+  .pipeline {
+    display: flex;
+    gap: 0;
+    margin-top: 40px;
+    align-items: stretch;
+  }
+
+  .pipeline-step {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px 20px;
+    position: relative;
+  }
+
+  .pipeline-step:first-child { border-radius: 12px 0 0 12px; }
+  .pipeline-step:last-child { border-radius: 0 12px 12px 0; }
+
+  .pipeline-step .step-phase {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .pipeline-step h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .pipeline-step p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .pipeline-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--amber);
+    font-size: 24px;
+    padding: 0 4px;
+  }
+
+  /* Tech stack table */
+  .tech-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tech-row:last-child { border-bottom: none; }
+
+  .tech-layer {
+    width: 140px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--dim);
+    flex-shrink: 0;
+  }
+
+  .tech-name {
+    font-size: 17px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .tech-why {
+    font-size: 14px;
+    color: var(--muted);
+    flex: 1.5;
+  }
+
+  /* Stat blocks */
+  .stat-block {
+    text-align: center;
+  }
+
+  .stat-block .number {
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .stat-block .desc {
+    font-size: 15px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* Title slide special */
+  .title-slide {
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .title-slide h1 {
+    font-size: 80px;
+    background: linear-gradient(135deg, var(--text) 0%, var(--amber) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .title-slide .tagline {
+    font-size: 28px;
+    color: var(--muted);
+    margin-top: 8px;
+    font-weight: 400;
+  }
+
+  .title-slide .event {
+    margin-top: 48px;
+    font-size: 16px;
+    color: var(--dim);
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+  }
+
+  /* Section divider */
+  .section-divider {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .section-divider h2 {
+    font-size: 56px;
+  }
+
+  /* Flow diagram */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 16px 0;
+  }
+
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .flow-arrow {
+    color: var(--amber);
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  /* Animated background for title */
+  .bg-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(150px);
+    opacity: 0.15;
+    pointer-events: none;
+  }
+
+  .glow-amber {
+    background: var(--amber);
+    top: -200px;
+    right: -100px;
+  }
+
+  .glow-blue {
+    background: var(--blue);
+    bottom: -200px;
+    left: -100px;
+  }
+
+  /* Quote */
+  .quote {
+    font-size: 32px;
+    font-weight: 300;
+    line-height: 1.5;
+    font-style: italic;
+    color: var(--muted);
+    border-left: 3px solid var(--amber);
+    padding-left: 32px;
+    max-width: 800px;
+  }
+
+  /* Demo CTA */
+  .demo-cta {
+    margin-top: 48px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--amber);
+    color: var(--bg);
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  /* Keyboard hint */
+  .kbd-hint {
+    position: fixed;
+    bottom: 36px;
+    left: 40px;
+    font-size: 12px;
+    color: var(--dim);
+    z-index: 100;
+  }
+
+  kbd {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: inherit;
+    font-size: 11px;
+  }
+
+  /* Highlight box */
+  .highlight-box {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-top: 24px;
+  }
+
+  .highlight-box p {
+    color: var(--text);
+    font-size: 17px;
+    line-height: 1.6;
+  }
+
+  /* Comparison */
+  .vs-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    gap: 0;
+    align-items: center;
+    margin: 10px 0;
+  }
+
+  .vs-left {
+    text-align: right;
+    padding-right: 20px;
+    font-size: 16px;
+    color: var(--dim);
+    text-decoration: line-through;
+  }
+
+  .vs-mid {
+    text-align: center;
+    color: var(--amber);
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .vs-right {
+    padding-left: 20px;
+    font-size: 16px;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- ============ SLIDE 1: TITLE ============ -->
+  <div class="slide title-slide active" data-slide="0">
+    <div class="bg-glow glow-amber"></div>
+    <div class="bg-glow glow-blue"></div>
+    <div class="label">NYC Build With AI Hackathon</div>
+    <h1>VoiceGraph</h1>
+    <p class="tagline">Talk to your data. See it think.</p>
+    <p class="event">
+      A voice-first interactive knowledge graph platform<br>
+      <span class="dim" style="font-size: 14px; margin-top: 8px; display: inline-block;">Built with Gemini Live &bull; Google ADK &bull; Neo4j &bull; React</span>
+    </p>
+  </div>
+
+  <!-- ============ SLIDE 2: THE PROBLEM ============ -->
+  <div class="slide" data-slide="1">
+    <div class="label">The Problem</div>
+    <h2>Knowledge is trapped<br>in disconnected silos</h2>
+    <div class="grid-3" style="margin-top: 48px;">
+      <div class="card">
+        <span class="icon">&#128196;</span>
+        <h3>Scattered Data</h3>
+        <p>Research papers, meeting notes, URLs, videos, CSVs &mdash; knowledge lives in dozens of formats across dozens of tools. Nothing connects to anything.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#128269;</span>
+        <h3>Search Fails</h3>
+        <p>Keyword search finds documents, not insights. "How does X relate to Y?" is unanswerable unless you manually trace connections yourself.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#9888;&#65039;</span>
+        <h3>RAG Isn't Enough</h3>
+        <p>Vanilla RAG retrieves chunks, not structure. It can't traverse relationships, find paths, or show you the shape of what you know.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 3: THE DEEPER PROBLEM ============ -->
+  <div class="slide" data-slide="2">
+    <div class="label">Why This Matters</div>
+    <h2>We don't need more answers.<br>We need to <span class="amber">see connections</span>.</h2>
+    <div class="columns" style="margin-top: 48px;">
+      <div class="col">
+        <p class="quote">"The most valuable knowledge isn't what you know &mdash; it's understanding how things relate to each other."</p>
+      </div>
+      <div class="col">
+        <ul>
+          <li>Researchers miss cross-domain connections hidden across papers</li>
+          <li>Analysts can't see the structural shape of complex datasets</li>
+          <li>Teams build redundant knowledge because they can't explore what exists</li>
+          <li>Current tools force you to type, click, and read &mdash; when you should be <strong class="amber">talking and seeing</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 4: OUR SOLUTION ============ -->
+  <div class="slide" data-slide="3">
+    <div class="label">Our Solution</div>
+    <h2>VoiceGraph: <span class="amber">Talk</span> to your data.<br><span class="emerald">See</span> it think.</h2>
+    <p class="subtitle" style="margin-bottom: 40px;">
+      A voice-first knowledge graph platform that ingests any data, builds structured knowledge automatically, and lets you explore it through natural conversation &mdash; while watching the AI reason through a living 3D graph in real time.
+    </p>
+    <div class="grid-3">
+      <div class="card" style="border-color: rgba(245,158,11,0.3);">
+        <span class="icon amber">&#127908;</span>
+        <h3 class="amber">Voice-First</h3>
+        <p>Gemini Live powers real-time bidirectional voice. Ask questions, refine the schema, explore connections &mdash; all by speaking naturally.</p>
+      </div>
+      <div class="card" style="border-color: rgba(52,211,153,0.3);">
+        <span class="icon emerald">&#129504;</span>
+        <h3 class="emerald">Intelligent Extraction</h3>
+        <p>3-phase pipeline discovers entities freely, generates a formal ontology, then re-extracts with precision. Not just NER &mdash; real knowledge engineering.</p>
+      </div>
+      <div class="card" style="border-color: rgba(96,165,250,0.3);">
+        <span class="icon blue">&#128308;</span>
+        <h3 class="blue">Living Graph</h3>
+        <p>Interactive 3D visualization shows the AI thinking &mdash; nodes glow, paths illuminate, connections ripple as the agent reasons through your questions.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 5: HOW IT WORKS (HIGH LEVEL) ============ -->
+  <div class="slide" data-slide="4">
+    <div class="label">How It Works</div>
+    <h2>From raw data to voice-navigable knowledge</h2>
+    <div class="pipeline" style="margin-top: 48px;">
+      <div class="pipeline-step">
+        <div class="step-phase amber">Step 1</div>
+        <h3>Ingest</h3>
+        <p>Drop in PDFs, text, URLs, YouTube links, or CSVs. Multi-format parser handles everything.</p>
+      </div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">
+        <div class="step-phase emerald">Step 2</div>
+        <h3>Extract</h3>
+        <p>3-phase pipeline: schema-free discovery, ontology generation, precision extraction with dedup.</p>
+      </div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">
+        <div class="step-phase blue">Step 3</div>
+        <h3>Structure</h3>
+        <p>Entities & relationships stored in Neo4j with provenance, confidence scores, and embeddings.</p>
+      </div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">
+        <div class="step-phase purple">Step 4</div>
+        <h3>Explore</h3>
+        <p>Voice conversation with agentic GraphRAG. 8 query tools, 3D visualization, thinking animations.</p>
+      </div>
+    </div>
+    <div class="highlight-box">
+      <p><strong class="amber">Key insight:</strong> The AI doesn't just answer &mdash; it shows you <em>how</em> it found the answer by illuminating paths through the graph in real time.</p>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 6: 3-PHASE EXTRACTION ============ -->
+  <div class="slide" data-slide="5">
+    <div class="label">Core Innovation #1</div>
+    <h2>3-Phase Extraction Pipeline</h2>
+    <p class="subtitle" style="margin-bottom: 36px;">Inspired by TrustGraph's ontology-guided approach, powered by neo4j-graphrag + Gemini.</p>
+    <div class="grid-3">
+      <div class="card">
+        <div class="step-phase amber" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Phase A &mdash; Discovery</div>
+        <h3>Schema-Free Extraction</h3>
+        <p>Gemini freely discovers all entities and relationships with no constraints. Maximum coverage &mdash; nothing is missed.</p>
+        <p style="margin-top: 12px; font-size: 13px; color: var(--dim);">Output: Raw graph + discovered schema</p>
+      </div>
+      <div class="card">
+        <div class="step-phase emerald" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Phase B &mdash; Ontology</div>
+        <h3>OWL Generation</h3>
+        <p>LLM generates a formal ontology in Turtle format from discovered patterns. Consolidates types, defines hierarchy, sets constraints.</p>
+        <p style="margin-top: 12px; font-size: 13px; color: var(--dim);">Output: Validated OWL ontology</p>
+      </div>
+      <div class="card">
+        <div class="step-phase blue" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Phase C &mdash; Precision</div>
+        <h3>Ontology-Guided Re-extraction</h3>
+        <p>Re-extracts constrained to the ontology. Per-chunk ontology subsetting keeps prompts small. Entity resolution deduplicates.</p>
+        <p style="margin-top: 12px; font-size: 13px; color: var(--dim);">Output: Clean, structured KG</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 7: AGENTIC GRAPHRAG ============ -->
+  <div class="slide" data-slide="6">
+    <div class="label">Core Innovation #2</div>
+    <h2>Agentic GraphRAG</h2>
+    <p class="subtitle" style="margin-bottom: 32px;">Not just semantic search &mdash; 8 specialized query tools the agent dynamically selects based on question type.</p>
+    <div class="grid-2">
+      <div>
+        <div class="tech-row">
+          <span class="tech-layer amber" style="width: 180px;">Concept Search</span>
+          <span class="tech-name">Vector similarity on entity embeddings</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-layer amber" style="width: 180px;">Entity Explorer</span>
+          <span class="tech-name">1-2 hop neighborhood traversal</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-layer amber" style="width: 180px;">Path Finder</span>
+          <span class="tech-name">Shortest path between any two entities</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-layer amber" style="width: 180px;">Text2Cypher</span>
+          <span class="tech-name">LLM-generated Cypher for complex queries</span>
+        </div>
+      </div>
+      <div>
+        <div class="tech-row">
+          <span class="tech-layer emerald" style="width: 180px;">Hybrid Search</span>
+          <span class="tech-name">Vector + graph traversal combined</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-layer emerald" style="width: 180px;">Communities</span>
+          <span class="tech-name">Cluster detection + LLM summaries</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-layer emerald" style="width: 180px;">Ontology Info</span>
+          <span class="tech-name">Schema introspection for meta-questions</span>
+        </div>
+        <div class="tech-row">
+          <span class="tech-layer emerald" style="width: 180px;">Graph Stats</span>
+          <span class="tech-name">Distribution, connectivity, growth metrics</span>
+        </div>
+      </div>
+    </div>
+    <div class="highlight-box">
+      <p><strong>Pre-built Cypher templates</strong> for common patterns (fast + reliable). <strong>Text2Cypher</strong> only for complex analytical questions. Best of both worlds.</p>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 8: THINKING UI ============ -->
+  <div class="slide" data-slide="7">
+    <div class="label">Core Innovation #3</div>
+    <h2>"Thinking Through the Graph"</h2>
+    <p class="subtitle" style="margin-bottom: 40px;">Watch the AI reason in real time. Three animation modes combine into an unprecedented UX.</p>
+    <div class="grid-3">
+      <div class="card" style="border-color: rgba(245,158,11,0.3);">
+        <h3 class="amber">Sequential Path Glow</h3>
+        <p>As the agent traverses nodes during a query, each node lights up in sequence &mdash; showing the exact reasoning path through the graph.</p>
+      </div>
+      <div class="card" style="border-color: rgba(96,165,250,0.3);">
+        <h3 class="blue">Ripple Expansion</h3>
+        <p>When exploring neighborhoods, concentric ripples expand outward from the query origin, revealing connections in layers.</p>
+      </div>
+      <div class="card" style="border-color: rgba(52,211,153,0.3);">
+        <h3 class="emerald">Thought Stream</h3>
+        <p>A floating overlay displays the agent's internal reasoning steps as they happen &mdash; "Searching for Einstein... Found 12 connections..."</p>
+      </div>
+    </div>
+    <p style="margin-top: 32px; color: var(--muted); font-size: 17px;">
+      Backend emits <code style="color: var(--amber);">thinking_*</code> WebSocket events <strong>during</strong> tool execution &mdash; the graph animates before the answer arrives.
+    </p>
+  </div>
+
+  <!-- ============ SLIDE 9: VOICE ONTOLOGY EDITING ============ -->
+  <div class="slide" data-slide="8">
+    <div class="label">Core Innovation #4</div>
+    <h2>Voice-Controlled Ontology Editing</h2>
+    <p class="subtitle" style="margin-bottom: 40px;">Refine the knowledge structure by speaking naturally. The system re-extracts automatically.</p>
+    <div class="columns">
+      <div class="col">
+        <h3 style="font-size: 20px; margin-bottom: 20px;">Say it &rarr; it happens</h3>
+        <div style="font-family: monospace; font-size: 14px; line-height: 2.2; color: var(--muted);">
+          <div><span class="dim">"</span><span style="color: var(--text);">Add a new entity type called Project</span><span class="dim">"</span></div>
+          <div style="color: var(--amber);">&nbsp;&nbsp;&rarr; add_class("Project", "Thing")</div>
+          <div style="margin-top: 8px;"><span class="dim">"</span><span style="color: var(--text);">Connect Person to Organization through 'works at'</span><span class="dim">"</span></div>
+          <div style="color: var(--amber);">&nbsp;&nbsp;&rarr; add_object_property("worksAt", "Person", "Org")</div>
+          <div style="margin-top: 8px;"><span class="dim">"</span><span style="color: var(--text);">Now re-scan documents for the new Project type</span><span class="dim">"</span></div>
+          <div style="color: var(--amber);">&nbsp;&nbsp;&rarr; trigger_re_extraction("new_types")</div>
+        </div>
+      </div>
+      <div class="col">
+        <h3 style="font-size: 20px; margin-bottom: 20px;">OntologyAgent: 13 tools</h3>
+        <ul style="font-size: 15px;">
+          <li>Add, remove, rename entity classes</li>
+          <li>Define object & datatype properties</li>
+          <li>Set class hierarchy (subClassOf)</li>
+          <li>Validate consistency with rdflib</li>
+          <li>Selective re-extraction after changes</li>
+          <li>OWL serialized as Turtle, manipulated as JSON</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 10: ARCHITECTURE ============ -->
+  <div class="slide" data-slide="9">
+    <div class="label">Architecture</div>
+    <h2>System Architecture</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 36px;">
+      <!-- Frontend -->
+      <div class="arch-box" style="border-color: rgba(96,165,250,0.4);">
+        <div class="box-label blue">Frontend</div>
+        <div class="box-title">React + TypeScript + Vite</div>
+        <div class="box-detail">Reagraph 3D &bull; Tailwind &bull; shadcn/ui</div>
+      </div>
+      <div class="arch-box" style="border-color: rgba(96,165,250,0.4);">
+        <div class="box-label blue">Voice UI</div>
+        <div class="box-title">Web Audio API</div>
+        <div class="box-detail">PCM capture &bull; Waveform &bull; Playback</div>
+      </div>
+      <div class="arch-box" style="border-color: rgba(96,165,250,0.4);">
+        <div class="box-label blue">Real-time</div>
+        <div class="box-title">WebSocket</div>
+        <div class="box-detail">Audio + Events + Graph updates</div>
+      </div>
+    </div>
+
+    <div class="arch-connector">&darr;&darr;&darr;</div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="arch-box" style="border-color: rgba(245,158,11,0.4);">
+        <div class="box-label amber">Backend</div>
+        <div class="box-title">Python FastAPI + Google ADK</div>
+        <div class="box-detail">Orchestrator &bull; 4 Sub-agents &bull; 23 Tools</div>
+      </div>
+      <div class="arch-box" style="border-color: rgba(245,158,11,0.4);">
+        <div class="box-label amber">Voice</div>
+        <div class="box-title">Gemini Live API</div>
+        <div class="box-detail">Bidirectional audio &bull; Function calling mid-conversation</div>
+      </div>
+    </div>
+
+    <div class="arch-connector">&darr;&darr;</div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+      <div class="arch-box" style="border-color: rgba(52,211,153,0.4);">
+        <div class="box-label emerald">Extraction</div>
+        <div class="box-title">neo4j-graphrag + Gemini Flash</div>
+        <div class="box-detail">3-phase pipeline &bull; Entity resolution</div>
+      </div>
+      <div class="arch-box" style="border-color: rgba(52,211,153,0.4);">
+        <div class="box-label emerald">Graph DB</div>
+        <div class="box-title">Neo4j AuraDB</div>
+        <div class="box-detail">Cypher queries &bull; Vector index &bull; 200K nodes</div>
+      </div>
+      <div class="arch-box" style="border-color: rgba(52,211,153,0.4);">
+        <div class="box-label emerald">Ontology</div>
+        <div class="box-title">rdflib + OWL</div>
+        <div class="box-detail">Turtle serialization &bull; JSON for agents</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 11: TECH STACK ============ -->
+  <div class="slide" data-slide="10">
+    <div class="label">Tech Stack</div>
+    <h2>Built on proven foundations</h2>
+    <div style="margin-top: 32px;">
+      <div class="tech-row">
+        <span class="tech-layer">Voice AI</span>
+        <span class="tech-name amber">Gemini Live</span>
+        <span class="tech-why">Real-time bidirectional voice + function calling mid-conversation</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-layer">Agents</span>
+        <span class="tech-name amber">Google ADK</span>
+        <span class="tech-why">Multi-agent orchestration, Cloud Run deployment</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-layer">Extraction</span>
+        <span class="tech-name emerald">Gemini 2.5 Flash</span>
+        <span class="tech-why">Fast, cheap, multimodal &mdash; via neo4j-graphrag VertexAILLM</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-layer">Graph DB</span>
+        <span class="tech-name emerald">Neo4j AuraDB Free</span>
+        <span class="tech-why">$0, instant setup, 200K nodes, mature Cypher</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-layer">KG Builder</span>
+        <span class="tech-name blue">neo4j-graphrag</span>
+        <span class="tech-why">Official Neo4j library &mdash; chunking, extraction, resolution, retrieval</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-layer">Visualization</span>
+        <span class="tech-name blue">Reagraph</span>
+        <span class="tech-why">React-native 3D graph, built-in highlighting, modern aesthetic</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-layer">Frontend</span>
+        <span class="tech-name purple">React + TypeScript + Vite</span>
+        <span class="tech-why">Tailwind + shadcn/ui + Zustand state management</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-layer">Backend</span>
+        <span class="tech-name purple">Python FastAPI</span>
+        <span class="tech-why">Async WebSocket gateway, REST API, background tasks</span>
+      </div>
+      <div class="tech-row">
+        <span class="tech-layer">Deploy</span>
+        <span class="tech-name dim">Google Cloud Run</span>
+        <span class="tech-why">Serverless, auto-scales, adk deploy cloud_run</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 12: WHAT MAKES US DIFFERENT ============ -->
+  <div class="slide" data-slide="11">
+    <div class="label">Differentiation</div>
+    <h2>What makes VoiceGraph different</h2>
+    <div class="grid-2" style="margin-top: 40px;">
+      <div>
+        <h3 style="margin-bottom: 24px;">Existing tools</h3>
+        <div class="vs-row" style="grid-template-columns: 1fr;">
+          <div style="color: var(--dim); font-size: 16px; padding: 8px 0; border-bottom: 1px solid var(--border);">ChatGPT / Gemini &mdash; text in, text out. No structure.</div>
+        </div>
+        <div class="vs-row" style="grid-template-columns: 1fr;">
+          <div style="color: var(--dim); font-size: 16px; padding: 8px 0; border-bottom: 1px solid var(--border);">RAG apps &mdash; chunk retrieval, no relationship awareness</div>
+        </div>
+        <div class="vs-row" style="grid-template-columns: 1fr;">
+          <div style="color: var(--dim); font-size: 16px; padding: 8px 0; border-bottom: 1px solid var(--border);">Neo4j Browser &mdash; powerful but requires Cypher expertise</div>
+        </div>
+        <div class="vs-row" style="grid-template-columns: 1fr;">
+          <div style="color: var(--dim); font-size: 16px; padding: 8px 0; border-bottom: 1px solid var(--border);">NotebookLM &mdash; conversational but no graph structure</div>
+        </div>
+        <div class="vs-row" style="grid-template-columns: 1fr;">
+          <div style="color: var(--dim); font-size: 16px; padding: 8px 0;">TrustGraph &mdash; powerful but 34 microservices, $250/mo</div>
+        </div>
+      </div>
+      <div>
+        <h3 class="amber" style="margin-bottom: 24px;">VoiceGraph</h3>
+        <div style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 16px;"><strong class="amber">Voice-first</strong> &mdash; speak naturally, hear answers, hands-free</div>
+        <div style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 16px;"><strong class="emerald">Visible reasoning</strong> &mdash; watch the AI think through the graph</div>
+        <div style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 16px;"><strong class="blue">Structured knowledge</strong> &mdash; real ontology, not just chunks</div>
+        <div style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 16px;"><strong class="purple">Multi-format ingestion</strong> &mdash; PDFs, URLs, YouTube, CSVs</div>
+        <div style="padding: 8px 0; font-size: 16px;"><strong style="color: var(--rose);">Zero infrastructure cost</strong> &mdash; AuraDB free + Cloud Run</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 13: VOICE INTERACTION FLOW ============ -->
+  <div class="slide" data-slide="12">
+    <div class="label">User Experience</div>
+    <h2>A conversation, not a query</h2>
+    <div class="columns" style="margin-top: 40px;">
+      <div class="col-wide">
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; font-family: monospace; font-size: 14px; line-height: 2;">
+          <div class="dim">// User speaks:</div>
+          <div style="color: var(--text);">"How does Einstein relate to quantum mechanics?"</div>
+          <br>
+          <div class="dim">// Gemini Live understands intent &rarr; selects find_path tool</div>
+          <div class="amber">find_path("Einstein", "Quantum Mechanics", max_hops=5)</div>
+          <br>
+          <div class="dim">// Backend executes Cypher &rarr; finds path</div>
+          <div class="dim">// Emits thinking_traverse events &rarr; graph animates</div>
+          <div class="emerald">highlight_nodes(["einstein", "photoelectric", "quantum"])</div>
+          <br>
+          <div class="dim">// Gemini narrates the result:</div>
+          <div style="color: var(--text);">"Einstein connects to Quantum Mechanics through the<br>&nbsp;Photoelectric Effect. His 1905 paper proposed light<br>&nbsp;quanta, which became foundational to quantum theory.<br>&nbsp;Would you like me to expand any of these nodes?"</div>
+        </div>
+      </div>
+      <div class="col">
+        <h3 style="font-size: 18px; margin-bottom: 16px;">What the user sees:</h3>
+        <ul style="font-size: 15px;">
+          <li>Graph dims &mdash; spotlight focuses</li>
+          <li>Nodes glow sequentially along the path</li>
+          <li>Thought stream shows reasoning steps</li>
+          <li>Voice narrates the finding</li>
+          <li>Follow-up conversation continues naturally</li>
+        </ul>
+        <div class="highlight-box" style="margin-top: 24px;">
+          <p style="font-size: 15px;"><strong>Key:</strong> The graph animates <em>before</em> the answer arrives &mdash; you see the AI thinking.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 14: DEMO SCENARIOS ============ -->
+  <div class="slide" data-slide="13">
+    <div class="label">Demo</div>
+    <h2>What we'll show you</h2>
+    <div class="grid-2" style="margin-top: 40px;">
+      <div class="card" style="border-color: rgba(245,158,11,0.3);">
+        <div class="step-phase amber" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Scenario 1</div>
+        <h3>Ingest & Build</h3>
+        <p>Drop in a research paper. Watch the 3-phase pipeline extract entities, generate an ontology, and populate a knowledge graph &mdash; all with live progress updates.</p>
+      </div>
+      <div class="card" style="border-color: rgba(52,211,153,0.3);">
+        <div class="step-phase emerald" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Scenario 2</div>
+        <h3>Voice Exploration</h3>
+        <p>Ask questions by voice. "How does X relate to Y?" "What are the main themes?" Watch the graph light up as the AI reasons through connections.</p>
+      </div>
+      <div class="card" style="border-color: rgba(96,165,250,0.3);">
+        <div class="step-phase blue" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Scenario 3</div>
+        <h3>Ontology Refinement</h3>
+        <p>"Add a new entity type called Research Lab." The system adds it to the schema and re-scans documents for instances &mdash; all through voice.</p>
+      </div>
+      <div class="card" style="border-color: rgba(167,139,250,0.3);">
+        <div class="step-phase purple" style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Scenario 4</div>
+        <h3>Thinking Animation</h3>
+        <p>The signature UX: nodes glow, paths illuminate, ripples expand, thought stream narrates &mdash; the graph is alive while the AI works.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLIDE 15: CLOSING ============ -->
+  <div class="slide section-divider" data-slide="14">
+    <div class="bg-glow glow-amber"></div>
+    <div class="bg-glow glow-blue"></div>
+    <div class="label">VoiceGraph</div>
+    <h2 style="font-size: 64px;">Talk to your data.<br><span class="amber">See it think.</span></h2>
+    <p class="subtitle" style="text-align: center; margin: 24px auto 0; max-width: 600px;">
+      Voice-first knowledge graph exploration with visible AI reasoning.
+    </p>
+    <div class="demo-cta">
+      Let's see it live &rarr;
+    </div>
+    <p style="margin-top: 40px; color: var(--dim); font-size: 15px;">
+      Built with Gemini Live &bull; Google ADK &bull; Neo4j &bull; Reagraph &bull; FastAPI &bull; React
+    </p>
+  </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <span class="slide-counter" id="counter">1 / 15</span>
+  <button onclick="prevSlide()" id="prevBtn">&larr;</button>
+  <button onclick="nextSlide()" id="nextBtn">&rarr;</button>
+</div>
+
+<div class="kbd-hint">
+  <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate &nbsp;&bull;&nbsp; <kbd>F</kbd> fullscreen
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const counter = document.getElementById('counter');
+
+  function showSlide(n) {
+    slides.forEach(s => s.classList.remove('active'));
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    progress.style.width = ((current + 1) / total * 100) + '%';
+    counter.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function nextSlide() { showSlide(current + 1); }
+  function prevSlide() { showSlide(current - 1); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+    if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  });
+
+  // Touch swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      diff > 0 ? nextSlide() : prevSlide();
+    }
+  });
+
+  showSlide(0);
+</script>
+
+</body>
+</html>

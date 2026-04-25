@@ -1,0 +1,15 @@
+**/.git
+**/.venv
+**/node_modules
+**/__pycache__
+**/.env
+**/.env.local
+**/dist
+**/.DS_Store
+*.pyc
+.claude/
+scripts/
+presentation.html
+SESSION_LOG.md
+PRD.md
+CLAUDE.md

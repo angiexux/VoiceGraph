@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceGraph — Knowledge Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* ─── RESET ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ─── DESIGN TOKENS ──────────────────────────────────── */
+  :root {
+    /* Mesh gradient stops */
+    --bg-tl:   #dde8f8;
+    --bg-tr:   #ede8f8;
+    --bg-br:   #ddf4ee;
+    --bg-bl:   #f8e8ee;
+    --bg-c:    #f0ecfb;
+
+    /* Glass levels */
+    --glass-1: rgba(255,255,255,0.50);
+    --glass-2: rgba(255,255,255,0.32);
+    --glass-3: rgba(255,255,255,0.20);
+    --glass-4: rgba(255,255,255,0.12);
+    --blur-1: blur(28px) saturate(190%);
+    --blur-2: blur(18px) saturate(160%);
+    --blur-3: blur(10px);
+    --blur-4: blur(6px);
+    --border-1: 1px solid rgba(255,255,255,0.80);
+    --border-2: 1px solid rgba(255,255,255,0.65);
+    --border-3: 1px solid rgba(255,255,255,0.50);
+    --border-4: 1px solid rgba(255,255,255,0.35);
+    --shadow-panel: 0 8px 48px rgba(100,120,200,0.10), 0 2px 8px rgba(100,120,200,0.06);
+
+    /* Typography */
+    --font-display: 'Syne', sans-serif;
+    --font-ui: 'DM Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Text */
+    --text-primary:   rgba(30,36,60,0.88);
+    --text-secondary: rgba(60,72,110,0.60);
+    --text-muted:     rgba(80,100,140,0.40);
+
+    /* ─── EXPANDED NODE PALETTE (15 categories) ─── */
+    /* Concept      — cornflower blue */
+    --c-concept-a: #c4d8f7;  --c-concept-b: #96b8f0;
+    /* Person       — dusty rose */
+    --c-person-a:  #f7c4d8;  --c-person-b:  #f096b8;
+    /* Org          — mint */
+    --c-org-a:     #c4f0d8;  --c-org-b:     #96e0b8;
+    /* AI / Model   — soft lavender */
+    --c-ai-a:      #e4c4f7;  --c-ai-b:      #c896f0;
+    /* Document     — warm sand */
+    --c-doc-a:     #f7e8c4;  --c-doc-b:     #f0cc96;
+    /* Tool         — pale cyan */
+    --c-tool-a:    #c4f0f7;  --c-tool-b:    #96dce8;
+    /* Event        — peach */
+    --c-event-a:   #f7d4c4;  --c-event-b:   #f0aa96;
+    /* Location     — sage green */
+    --c-loc-a:     #d4f0c4;  --c-loc-b:     #aae096;
+    /* Date / Time  — sky steel */
+    --c-time-a:    #c4dcf7;  --c-time-b:    #96c0f0;
+    /* Metric       — golden */
+    --c-metric-a:  #f7f0c4;  --c-metric-b:  #e8d496;
+    /* Technology   — violet */
+    --c-tech-a:    #d4c4f7;  --c-tech-b:    #aa96f0;
+    /* Process      — coral */
+    --c-proc-a:    #f7c4cc;  --c-proc-b:    #f09696;
+    /* Topic        — turquoise */
+    --c-topic-a:   #c4f7f0;  --c-topic-b:   #96e8dc;
+    /* Policy/Law   — lilac */
+    --c-policy-a:  #edc4f7;  --c-policy-b:  #d496f0;
+    /* Research     — teal-blue */
+    --c-research-a:#c4ecf7;  --c-research-b:#96d4e8;
+
+    /* Active accent */
+    --accent-indigo: #6b8dd6;
+    --accent-violet: #9b6bd6;
+    --accent-grad: linear-gradient(135deg, #6b8dd6, #9b6bd6);
+  }
+
+  /* ─── BODY & MESH BG ─────────────────────────────────── */
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--font-ui);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    background:
+      radial-gradient(ellipse 70% 70% at 0% 0%,   rgba(167,190,255,0.30) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 60% at 100% 0%,  rgba(200,167,255,0.22) 0%, transparent 55%),
+      radial-gradient(ellipse 80% 60% at 100% 100%,rgba(167,230,210,0.20) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 70% at 0% 100%,  rgba(248,180,200,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 50% at 50% 50%,  rgba(210,195,255,0.15) 0%, transparent 70%),
+      linear-gradient(135deg, var(--bg-tl) 0%, var(--bg-c) 45%, var(--bg-br) 100%);
+    /* grain texture */
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+  }
+
+  /* ─── APP SHELL ──────────────────────────────────────── */
+  #app {
+    display: grid;
+    grid-template-rows: 52px 1fr 64px;
+    grid-template-columns: 280px 1fr 320px;
+    grid-template-areas:
+      "nav  nav  nav"
+      "left main right"
+      "bar  bar  bar";
+    height: 100vh;
+    position: relative; z-index: 1;
+    gap: 0;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  /* ─── GLASS MIXIN ────────────────────────────────────── */
+  .glass-1 {
+    background: var(--glass-1);
+    backdrop-filter: var(--blur-1);
+    -webkit-backdrop-filter: var(--blur-1);
+    border: var(--border-1);
+    border-radius: 16px;
+    box-shadow: var(--shadow-panel);
+  }
+  .glass-2 {
+    background: var(--glass-2);
+    backdrop-filter: var(--blur-2);
+    -webkit-backdrop-filter: var(--blur-2);
+    border: var(--border-2);
+    border-radius: 12px;
+  }
+  .glass-3 {
+    background: var(--glass-3);
+    backdrop-filter: var(--blur-3);
+    -webkit-backdrop-filter: var(--blur-3);
+    border: var(--border-3);
+    border-radius: 8px;
+  }
+  .glass-4 {
+    background: var(--glass-4);
+    backdrop-filter: var(--blur-4);
+    border: var(--border-4);
+    border-radius: 6px;
+  }
+
+  /* ─── NAV ────────────────────────────────────────────── */
+  nav {
+    grid-area: nav;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .nav-logo .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-grad);
+    box-shadow: 0 0 8px rgba(107,141,214,0.5);
+    animation: pulse-dot 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.3); }
+  }
+
+  .nav-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex: 1;
+    justify-content: center;
+  }
+  .nav-filters::-webkit-scrollbar { display: none; }
+
+  .filter-pill {
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(180,200,230,0.35);
+    background: var(--glass-3);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+  .filter-pill:hover { background: var(--glass-2); color: var(--text-primary); }
+  .filter-pill.active {
+    border-color: rgba(255,255,255,0.7);
+    color: var(--text-primary);
+    box-shadow: 0 2px 10px rgba(100,130,210,0.12);
+  }
+  .filter-pill[data-type="all"].active     { background: rgba(107,141,214,0.15); }
+  .filter-pill[data-type="concept"].active { background: rgba(150,184,240,0.22); }
+  .filter-pill[data-type="person"].active  { background: rgba(240,150,184,0.22); }
+  .filter-pill[data-type="org"].active     { background: rgba(150,224,184,0.22); }
+  .filter-pill[data-type="ai"].active      { background: rgba(200,150,240,0.22); }
+  .filter-pill[data-type="event"].active   { background: rgba(240,170,150,0.22); }
+  .filter-pill[data-type="location"].active{ background: rgba(170,224,150,0.22); }
+  .filter-pill[data-type="metric"].active  { background: rgba(232,212,150,0.22); }
+  .filter-pill[data-type="tech"].active    { background: rgba(170,150,240,0.22); }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+
+  .badge-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0;
+    padding: 4px 9px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .badge-count .count { font-weight: 500; color: var(--text-primary); }
+
+  .btn-ingest {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    padding: 7px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(107,141,214,0.4);
+    background: linear-gradient(135deg, rgba(107,141,214,0.22), rgba(155,107,214,0.18));
+    color: #4a6ab8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-ingest:hover {
+    background: linear-gradient(135deg, rgba(107,141,214,0.35), rgba(155,107,214,0.28));
+    box-shadow: 0 3px 14px rgba(107,141,214,0.20);
+  }
+
+  /* ─── LEFT PANEL ─────────────────────────────────────── */
+  #left-panel {
+    grid-area: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+    padding: 14px;
+  }
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(180,200,230,0.25);
+  }
+  .agent-log {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(180,200,230,0.3) transparent;
+  }
+  .log-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    animation: slide-up 0.3s ease;
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .log-bubble {
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    position: relative;
+  }
+  .log-bubble.thinking {
+    border-left: 2px solid rgba(150,180,240,0.6);
+    animation: thinking-pulse 2s ease-in-out infinite;
+  }
+  @keyframes thinking-pulse {
+    0%,100% { border-color: rgba(150,180,240,0.6); }
+    50%      { border-color: rgba(200,150,240,0.6); }
+  }
+  .log-meta {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--text-muted);
+    padding-left: 4px;
+  }
+  .tool-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(220,232,255,0.45);
+    border: 1px solid rgba(180,210,255,0.5);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: #5070b0;
+    margin: 2px 0;
+  }
+  .tool-pill::before { content: '›'; font-size: 11px; opacity: 0.7; }
+
+  /* ─── MAIN GRAPH ─────────────────────────────────────── */
+  #main-canvas {
+    grid-area: main;
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+  }
+  #graph-svg {
+    width: 100%; height: 100%;
+    position: absolute; inset: 0;
+  }
+
+  /* ─── NODE LEGEND ────────────────────────────────────── */
+  .legend {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-width: 420px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px 4px 6px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .legend-item:hover { background: rgba(255,255,255,0.30); color: var(--text-primary); }
+  .legend-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ─── RIGHT PANEL ────────────────────────────────────── */
+  #right-panel {
+    grid-area: right;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+    padding: 14px;
+  }
+  .node-name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    color: var(--text-primary);
+  }
+  .node-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-top: 6px;
+  }
+  .type-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  .confidence-wrap {
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--glass-3);
+    border: var(--border-3);
+  }
+  .confidence-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .confidence-bar-track {
+    height: 4px; border-radius: 2px;
+    background: rgba(180,200,230,0.25);
+    overflow: hidden;
+  }
+  .confidence-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent-indigo), var(--accent-violet));
+    transition: width 0.8s cubic-bezier(0.23,1,0.32,1);
+  }
+  .confidence-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-top: 8px;
+  }
+
+  .connections-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(180,200,230,0.3) transparent;
+  }
+  .conn-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--glass-3);
+    border: var(--border-3);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 12px;
+    letter-spacing: -0.01em;
+  }
+  .conn-item:hover { background: var(--glass-2); border-color: rgba(255,255,255,0.65); }
+  .conn-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .conn-name { color: var(--text-primary); flex: 1; font-weight: 400; }
+  .conn-rel {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--text-muted);
+    background: rgba(200,215,240,0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .provenance-section { margin-top: 4px; }
+  .prov-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--text-secondary);
+    margin: 3px 3px 3px 0;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .prov-chip:hover { background: var(--glass-2); color: var(--text-primary); }
+  .prov-icon { font-size: 12px; }
+
+  /* ─── VOICE BAR ──────────────────────────────────────── */
+  #voice-bar {
+    grid-area: bar;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .query-history {
+    display: flex;
+    gap: 5px;
+    flex: 0 0 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: 220px;
+  }
+  .query-history::-webkit-scrollbar { display: none; }
+  .qhist-pill {
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    padding: 5px 11px;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .qhist-pill:hover { background: var(--glass-2); color: var(--text-primary); }
+
+  .voice-input-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: var(--glass-2);
+    border: var(--border-2);
+    height: 40px;
+    transition: all 0.3s ease;
+  }
+  .voice-input-wrap.listening {
+    border-color: rgba(150,180,240,0.7);
+    box-shadow: 0 0 0 3px rgba(150,180,240,0.12), 0 0 20px rgba(150,180,240,0.08);
+    background: rgba(220,232,255,0.30);
+  }
+
+  #voice-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+  }
+  #voice-input::placeholder { color: var(--text-muted); }
+
+  .waveform {
+    display: flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 20px;
+    display: none;
+  }
+  .waveform.active { display: flex; }
+  .wave-bar {
+    width: 2.5px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #96b8f0, #c896f0);
+    animation: wave-anim 0.8s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(1) { animation-delay: 0.0s; }
+  .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(5) { animation-delay: 0.0s; }
+  @keyframes wave-anim {
+    0%,100% { height: 4px; }
+    50%      { height: 18px; }
+  }
+
+  .mic-btn {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid rgba(180,200,230,0.35);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+  }
+  .mic-btn:hover, .mic-btn.active { background: var(--glass-3); border-color: rgba(150,180,240,0.5); }
+  .mic-btn.active { animation: mic-pulse 1.4s ease-in-out infinite; }
+  @keyframes mic-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(150,180,240,0.3); }
+    50%      { box-shadow: 0 0 0 6px rgba(150,180,240,0); }
+  }
+
+  .agent-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #96e0b8; box-shadow: 0 0 6px rgba(150,224,184,0.6);
+  }
+  .agent-status.thinking .status-dot {
+    background: #96b8f0;
+    animation: blink 0.8s ease-in-out infinite;
+    box-shadow: 0 0 6px rgba(150,184,240,0.6);
+  }
+  .agent-status.traversing .status-dot {
+    background: #c896f0;
+    animation: blink 0.5s ease-in-out infinite;
+    box-shadow: 0 0 6px rgba(200,150,240,0.6);
+  }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* ─── SVG NODES ──────────────────────────────────────── */
+  .node-circle {
+    cursor: pointer;
+    transition: filter 0.25s ease, opacity 0.25s ease;
+  }
+  .node-circle:hover { filter: brightness(1.05); }
+  .node-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    fill: rgba(30,36,60,0.75);
+    pointer-events: none;
+    user-select: none;
+  }
+  .edge-line {
+    stroke: rgba(100,110,130,0.30);
+    stroke-width: 1;
+    fill: none;
+    transition: stroke 0.3s ease;
+  }
+  .edge-line.active {
+    stroke-width: 2;
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    animation: draw-edge 0.6s ease forwards;
+  }
+  @keyframes draw-edge {
+    to { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── NAV ───────────────────────────────────────────── -->
+  <nav class="glass-1">
+    <div class="nav-logo">
+      <div class="dot"></div>
+      VoiceGraph
+    </div>
+    <div class="nav-filters">
+      <button class="filter-pill active" data-type="all">All</button>
+      <button class="filter-pill" data-type="concept">Concept</button>
+      <button class="filter-pill" data-type="person">Person</button>
+      <button class="filter-pill" data-type="org">Org</button>
+      <button class="filter-pill" data-type="ai">AI Model</button>
+      <button class="filter-pill" data-type="event">Event</button>
+      <button class="filter-pill" data-type="location">Location</button>
+      <button class="filter-pill" data-type="metric">Metric</button>
+      <button class="filter-pill" data-type="tech">Tech</button>
+      <button class="filter-pill" data-type="process">Process</button>
+      <button class="filter-pill" data-type="topic">Topic</button>
+      <button class="filter-pill" data-type="policy">Policy</button>
+      <button class="filter-pill" data-type="doc">Document</button>
+      <button class="filter-pill" data-type="time">Time</button>
+      <button class="filter-pill" data-type="research">Research</button>
+    </div>
+    <div class="nav-right">
+      <div class="badge-count glass-3">
+        <span>Nodes</span><span class="count">248</span>
+      </div>
+      <div class="badge-count glass-3">
+        <span>Edges</span><span class="count">814</span>
+      </div>
+      <button class="btn-ingest glass-3">+ Ingest</button>
+    </div>
+  </nav>
+
+  <!-- ── LEFT PANEL ─────────────────────────────────────── -->
+  <aside id="left-panel" class="glass-1">
+    <div class="panel-title">Agent Trace</div>
+    <div class="agent-log" id="agent-log">
+
+      <div class="log-entry">
+        <div class="log-bubble glass-3">Query received. Parsing intent and routing to GraphRAG pipeline.</div>
+        <div class="log-meta">00:00:01 · query_parser</div>
+      </div>
+
+      <div class="log-entry">
+        <div class="tool-pill">get_graph_stats</div>
+        <div class="log-bubble glass-3">Graph contains 248 nodes, 814 edges across 15 entity types. Confidence threshold: 0.72.</div>
+        <div class="log-meta">00:00:02 · graph_tools</div>
+      </div>
+
+      <div class="log-entry">
+        <div class="tool-pill">query_nodes(type=Person, limit=20)</div>
+        <div class="log-bubble glass-3">Found 34 Person entities. Filtering by relevance score → top 8 selected.</div>
+        <div class="log-meta">00:00:03 · retrieval</div>
+      </div>
+
+      <div class="log-entry">
+        <div class="tool-pill">traverse_paths(depth=3)</div>
+        <div class="log-bubble thinking glass-3">Traversing connections from selected nodes through Concept and Organization clusters. Evaluating 3-hop paths…</div>
+        <div class="log-meta">00:00:04 · pathfinder · thinking</div>
+      </div>
+
+      <div class="log-entry">
+        <div class="log-bubble glass-3">Synthesis complete. 3 contradiction edges detected between Policy nodes. Highlighting conflict paths.</div>
+        <div class="log-meta">00:00:06 · synthesis</div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ── GRAPH CANVAS ───────────────────────────────────── -->
+  <main id="main-canvas">
+    <svg id="graph-svg" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Active edge gradient -->
+        <linearGradient id="edge-active" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#96b8f0" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#c896f0" stop-opacity="0.8"/>
+        </linearGradient>
+        <!-- Conflict edge gradient -->
+        <linearGradient id="edge-conflict" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#f09696" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#f0c896" stop-opacity="0.8"/>
+        </linearGradient>
+
+        <!-- Glow filter for hovered/active nodes -->
+        <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-sm" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- ── EDGES ── -->
+      <g id="edges">
+        <line class="edge-line" x1="400" y1="300" x2="240" y2="190"/>
+        <line class="edge-line" x1="400" y1="300" x2="560" y2="190"/>
+        <line class="edge-line" x1="400" y1="300" x2="580" y2="340"/>
+        <line class="edge-line" x1="400" y1="300" x2="520" y2="460"/>
+        <line class="edge-line" x1="400" y1="300" x2="280" y2="450"/>
+        <line class="edge-line" x1="400" y1="300" x2="200" y2="360"/>
+        <line class="edge-line" x1="400" y1="300" x2="320" y2="155"/>
+        <line class="edge-line" x1="400" y1="300" x2="480" y2="155"/>
+        <line class="edge-line" x1="240" y1="190" x2="320" y2="155"/>
+        <line class="edge-line" x1="560" y1="190" x2="480" y2="155"/>
+        <line class="edge-line" x1="200" y1="360" x2="280" y2="450"/>
+        <line class="edge-line" x1="580" y1="340" x2="520" y2="460"/>
+        <!-- conflict edges (dashed) -->
+        <line class="edge-line" x1="560" y1="190" x2="580" y2="340"
+          stroke="url(#edge-conflict)" stroke-dasharray="5,4" stroke-width="1.5" stroke-opacity="0.7"/>
+        <line class="edge-line" x1="280" y1="450" x2="200" y2="360"
+          stroke="url(#edge-conflict)" stroke-dasharray="5,4" stroke-width="1.5" stroke-opacity="0.6"/>
+        <!-- active path -->
+        <line id="active-edge-1" class="edge-line" x1="400" y1="300" x2="240" y2="190"
+          stroke="url(#edge-active)" style="display:none"/>
+        <line id="active-edge-2" class="edge-line" x1="240" y1="190" x2="320" y2="155"
+          stroke="url(#edge-active)" style="display:none"/>
+
+        <!-- Satellite edges -->
+        <line class="edge-line" x1="240" y1="190" x2="130" y2="130"/>
+        <line class="edge-line" x1="240" y1="190" x2="155" y2="250"/>
+        <line class="edge-line" x1="560" y1="190" x2="670" y2="130"/>
+        <line class="edge-line" x1="560" y1="190" x2="650" y2="250"/>
+        <line class="edge-line" x1="520" y1="460" x2="620" y2="510"/>
+        <line class="edge-line" x1="280" y1="450" x2="180" y2="510"/>
+      </g>
+
+      <!-- ── NODES ── -->
+      <g id="nodes">
+
+        <!-- Hub — Concept -->
+        <g class="node-circle" data-id="n0" data-type="concept" onclick="selectNode('Algorithmic Bias','concept',0.91,['Fair ML','Policy Conflict','Bias Audit'])">
+          <circle cx="400" cy="300" r="30" fill="rgba(196,216,247,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="400" y="344" text-anchor="middle">Algo Bias</text>
+        </g>
+
+        <!-- Person -->
+        <g class="node-circle" data-type="person" onclick="selectNode('Dr. Sarah Chen','person',0.87,['MIT Media Lab','Bias Audit','2024 Report'])">
+          <circle cx="240" cy="190" r="20" fill="rgba(247,196,216,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="240" y="216" text-anchor="middle">Dr. S. Chen</text>
+        </g>
+
+        <!-- Org -->
+        <g class="node-circle" data-type="org" onclick="selectNode('MIT Media Lab','org',0.95,['Dr. S. Chen','AI Ethics','Research Grant'])">
+          <circle cx="560" cy="190" r="22" fill="rgba(196,240,216,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="560" y="217" text-anchor="middle">MIT Media Lab</text>
+        </g>
+
+        <!-- AI Model -->
+        <g class="node-circle" data-type="ai" onclick="selectNode('GPT-4o Eval','ai',0.78,['Bias Audit','Metric Disparity','Research'])">
+          <circle cx="580" cy="340" r="17" fill="rgba(228,196,247,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="580" y="362" text-anchor="middle">GPT-4o Eval</text>
+        </g>
+
+        <!-- Document -->
+        <g class="node-circle" data-type="doc" onclick="selectNode('2024 Audit Report','doc',0.88,['Dr. S. Chen','Algo Bias','Policy Conflict'])">
+          <circle cx="520" cy="460" r="18" fill="rgba(247,232,196,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="520" y="484" text-anchor="middle">2024 Report</text>
+        </g>
+
+        <!-- Tool -->
+        <g class="node-circle" data-type="tool" onclick="selectNode('SHAP Explainer','tool',0.82,['Metric Disparity','Bias Audit','GPT-4o Eval'])">
+          <circle cx="280" cy="450" r="16" fill="rgba(196,240,247,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="280" y="472" text-anchor="middle">SHAP</text>
+        </g>
+
+        <!-- Location -->
+        <g class="node-circle" data-type="location" onclick="selectNode('Cambridge, MA','location',0.99,['MIT Media Lab','Dr. S. Chen'])">
+          <circle cx="200" cy="360" r="15" fill="rgba(212,240,196,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="200" y="381" text-anchor="middle">Cambridge</text>
+        </g>
+
+        <!-- Event -->
+        <g class="node-circle" data-type="event" onclick="selectNode('NeurIPS 2024','event',0.84,['Dr. S. Chen','MIT Media Lab','Bias Audit'])">
+          <circle cx="320" cy="155" r="16" fill="rgba(247,212,196,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="320" y="177" text-anchor="middle">NeurIPS 24</text>
+        </g>
+
+        <!-- Time -->
+        <g class="node-circle" data-type="time" onclick="selectNode('Q3 2024','time',1.0,['2024 Report','Bias Audit','Metric Disparity'])">
+          <circle cx="480" cy="155" r="14" fill="rgba(196,220,247,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="480" y="175" text-anchor="middle">Q3 2024</text>
+        </g>
+
+        <!-- Metric -->
+        <g class="node-circle" data-type="metric" onclick="selectNode('Disparity Score 0.34','metric',0.76,['Bias Audit','GPT-4o Eval'])">
+          <circle cx="130" cy="130" r="13" fill="rgba(247,240,196,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="130" y="149" text-anchor="middle">Disparity</text>
+        </g>
+
+        <!-- Tech -->
+        <g class="node-circle" data-type="tech" onclick="selectNode('Neo4j Graph DB','tech',0.92,['Tool Pipeline','Algo Bias','Research'])">
+          <circle cx="155" cy="250" r="14" fill="rgba(212,196,247,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="155" y="270" text-anchor="middle">Neo4j</text>
+        </g>
+
+        <!-- Process -->
+        <g class="node-circle" data-type="process" onclick="selectNode('3-Phase Pipeline','process',0.89,['Ingest','Extract','Structure'])">
+          <circle cx="670" cy="130" r="15" fill="rgba(247,196,204,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="670" y="151" text-anchor="middle">Pipeline</text>
+        </g>
+
+        <!-- Topic -->
+        <g class="node-circle" data-type="topic" onclick="selectNode('AI Fairness','topic',0.85,['Algo Bias','Policy Conflict','Research'])">
+          <circle cx="650" cy="250" r="15" fill="rgba(196,247,240,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="650" y="271" text-anchor="middle">AI Fairness</text>
+        </g>
+
+        <!-- Policy -->
+        <g class="node-circle" data-type="policy" onclick="selectNode('EU AI Act Art.10','policy',0.80,['MIT Media Lab','Algo Bias','Conflict'])">
+          <circle cx="620" cy="510" r="15" fill="rgba(237,196,247,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="620" y="531" text-anchor="middle">EU AI Act</text>
+        </g>
+
+        <!-- Research -->
+        <g class="node-circle" data-type="research" onclick="selectNode('FAccT 2024 Paper','research',0.83,['Dr. S. Chen','Algo Bias','NeurIPS 24'])">
+          <circle cx="180" cy="510" r="14" fill="rgba(196,236,247,0.45)" stroke="rgba(120,130,150,0.50)" stroke-width="1.5"/>
+          <text class="node-label" x="180" y="530" text-anchor="middle">FAccT Paper</text>
+        </g>
+
+      </g>
+    </svg>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(196,216,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Concept</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(247,196,216,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Person</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(196,240,216,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Org</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(228,196,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>AI Model</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(247,232,196,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Document</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(196,240,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Tool</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(247,212,196,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Event</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(212,240,196,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Location</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(196,220,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Time</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(247,240,196,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Metric</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(212,196,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Tech</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(247,196,204,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Process</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(196,247,240,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Topic</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(237,196,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Policy</div>
+      <div class="legend-item glass-4"><div class="legend-dot" style="background:rgba(196,236,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>Research</div>
+    </div>
+  </main>
+
+  <!-- ── RIGHT PANEL ────────────────────────────────────── -->
+  <aside id="right-panel" class="glass-1">
+    <div class="panel-title">Node Detail</div>
+    <div id="node-name" class="node-name">Algorithmic Bias</div>
+    <div id="node-type-badge" class="node-type-badge glass-3">
+      <div class="type-dot" style="background:rgba(196,216,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>
+      <span>Concept</span>
+    </div>
+
+    <div class="confidence-wrap" style="margin-top:12px">
+      <div class="confidence-label">Confidence Score</div>
+      <div class="confidence-value" id="conf-val">0.91</div>
+      <div class="confidence-bar-track" style="margin-top:6px">
+        <div class="confidence-bar-fill" id="conf-bar" style="width:91%"></div>
+      </div>
+    </div>
+
+    <div class="panel-title" style="margin-top:12px">Connections</div>
+    <div class="connections-list" id="conn-list">
+      <div class="conn-item glass-3">
+        <div class="conn-dot" style="background:rgba(196,216,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>
+        <span class="conn-name">Fair ML</span>
+        <span class="conn-rel">related_to</span>
+      </div>
+      <div class="conn-item glass-3">
+        <div class="conn-dot" style="background:rgba(237,196,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>
+        <span class="conn-name">Policy Conflict</span>
+        <span class="conn-rel">conflicts_with</span>
+      </div>
+      <div class="conn-item glass-3">
+        <div class="conn-dot" style="background:rgba(196,236,247,0.55);border:1.5px solid rgba(110,120,140,0.45)"></div>
+        <span class="conn-name">Bias Audit</span>
+        <span class="conn-rel">studied_by</span>
+      </div>
+    </div>
+
+    <div class="provenance-section">
+      <div class="panel-title" style="margin-bottom:6px">Provenance</div>
+      <div>
+        <span class="prov-chip glass-3"><span class="prov-icon">📄</span>2024 Audit Report</span>
+        <span class="prov-chip glass-3"><span class="prov-icon">🔗</span>arxiv.org/2410.xxxxx</span>
+        <span class="prov-chip glass-3"><span class="prov-icon">🎥</span>NeurIPS Talk</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── VOICE BAR ──────────────────────────────────────── -->
+  <footer id="voice-bar" class="glass-1">
+    <div class="query-history">
+      <div class="qhist-pill glass-3">bias in CV tools</div>
+      <div class="qhist-pill glass-3">EU AI Act scope</div>
+      <div class="qhist-pill glass-3">SHAP explanations</div>
+    </div>
+
+    <div class="voice-input-wrap" id="voice-wrap">
+      <div class="waveform" id="waveform">
+        <div class="wave-bar" style="height:6px"></div>
+        <div class="wave-bar" style="height:10px"></div>
+        <div class="wave-bar" style="height:16px"></div>
+        <div class="wave-bar" style="height:10px"></div>
+        <div class="wave-bar" style="height:6px"></div>
+      </div>
+      <input id="voice-input" type="text" placeholder="Ask anything about the knowledge graph…" />
+      <button class="mic-btn" id="mic-btn" title="Voice input">🎙</button>
+    </div>
+
+    <div class="agent-status glass-3" id="agent-status">
+      <div class="status-dot"></div>
+      <span id="status-text">Ready</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+/* ─── NODE COLOR MAP ──────────────────────────────────── */
+const typeColors = {
+  concept:  'rgba(196,216,247,0.55)',
+  person:   'rgba(247,196,216,0.55)',
+  org:      'rgba(196,240,216,0.55)',
+  ai:       'rgba(228,196,247,0.55)',
+  doc:      'rgba(247,232,196,0.55)',
+  tool:     'rgba(196,240,247,0.55)',
+  event:    'rgba(247,212,196,0.55)',
+  location: 'rgba(212,240,196,0.55)',
+  time:     'rgba(196,220,247,0.55)',
+  metric:   'rgba(247,240,196,0.55)',
+  tech:     'rgba(212,196,247,0.55)',
+  process:  'rgba(247,196,204,0.55)',
+  topic:    'rgba(196,247,240,0.55)',
+  policy:   'rgba(237,196,247,0.55)',
+  research: 'rgba(196,236,247,0.55)',
+};
+const greyBorder = '1.5px solid rgba(110,120,140,0.45)';
+
+const typeLabels = {
+  concept:'Concept', person:'Person', org:'Organization', ai:'AI Model',
+  doc:'Document', tool:'Tool', event:'Event', location:'Location',
+  time:'Date/Time', metric:'Metric', tech:'Technology', process:'Process',
+  topic:'Topic', policy:'Policy', research:'Research',
+};
+
+/* ─── SELECT NODE ────────────────────────────────────── */
+function selectNode(name, type, conf, conns) {
+  document.getElementById('node-name').textContent = name;
+  const col = typeColors[type] || typeColors.concept;
+  const badge = document.getElementById('node-type-badge');
+  badge.querySelector('.type-dot').style.cssText = `background:${col};border:${greyBorder}`;
+  badge.querySelector('span').textContent = typeLabels[type] || type;
+  badge.style.background = col;
+  badge.style.border = greyBorder;
+  badge.style.color = 'rgba(30,36,60,0.7)';
+
+  const pct = Math.round(conf * 100);
+  document.getElementById('conf-val').textContent = conf.toFixed(2);
+  document.getElementById('conf-bar').style.width = pct + '%';
+
+  const list = document.getElementById('conn-list');
+  list.innerHTML = conns.map(c => {
+    const t = guessType(c);
+    const cc = typeColors[t];
+    const rel = guessRel(c);
+    return `<div class="conn-item glass-3">
+      <div class="conn-dot" style="background:${cc};border:${greyBorder}"></div>
+      <span class="conn-name">${c}</span>
+      <span class="conn-rel">${rel}</span>
+    </div>`;
+  }).join('');
+}
+
+function guessType(name) {
+  if (/report|paper|doc/i.test(name)) return 'doc';
+  if (/lab|inc\.|corp|org|eu/i.test(name)) return 'org';
+  if (/gpt|model|llm|bert/i.test(name)) return 'ai';
+  if (/law|act|policy|regulation/i.test(name)) return 'policy';
+  if (/pipeline|process|phase/i.test(name)) return 'process';
+  if (/score|rate|metric|disparity/i.test(name)) return 'metric';
+  if (/neo4j|shap|tool|explainer/i.test(name)) return 'tool';
+  return 'concept';
+}
+
+function guessRel(name) {
+  const rels = ['related_to','studied_by','conflicts_with','produced_by','part_of','measures','references'];
+  return rels[Math.floor(Math.random() * rels.length)];
+}
+
+/* ─── FILTER PILLS ───────────────────────────────────── */
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    const type = pill.dataset.type;
+    document.querySelectorAll('.node-circle').forEach(n => {
+      n.style.opacity = (type === 'all' || n.dataset.type === type) ? '1' : '0.2';
+    });
+  });
+});
+
+/* ─── MIC / VOICE ────────────────────────────────────── */
+let listening = false;
+const micBtn = document.getElementById('mic-btn');
+const voiceWrap = document.getElementById('voice-wrap');
+const waveform = document.getElementById('waveform');
+const statusEl = document.getElementById('agent-status');
+const statusText = document.getElementById('status-text');
+const voiceInput = document.getElementById('voice-input');
+
+micBtn.addEventListener('click', toggleListening);
+voiceInput.addEventListener('keydown', e => { if (e.key === 'Enter') simulateQuery(voiceInput.value); });
+
+function toggleListening() {
+  listening = !listening;
+  micBtn.classList.toggle('active', listening);
+  voiceWrap.classList.toggle('listening', listening);
+  waveform.classList.toggle('active', listening);
+  if (listening) {
+    voiceInput.value = '';
+    voiceInput.placeholder = 'Listening…';
+    setTimeout(() => {
+      voiceInput.value = 'Which researchers identified bias in facial recognition systems?';
+      listening = false;
+      micBtn.classList.remove('active');
+      voiceWrap.classList.remove('listening');
+      waveform.classList.remove('active');
+      voiceInput.placeholder = 'Ask anything about the knowledge graph…';
+      simulateQuery(voiceInput.value);
+    }, 2200);
+  }
+}
+
+function simulateQuery(q) {
+  if (!q.trim()) return;
+  setStatus('thinking');
+  setTimeout(() => {
+    setStatus('traversing');
+    showActivePath();
+    addLogEntry('Traversing Person → Concept cluster. Matching "facial recognition" to Algorithmic Bias node.');
+    setTimeout(() => {
+      setStatus('done');
+      selectNode('Dr. Sarah Chen', 'person', 0.87, ['MIT Media Lab','Bias Audit','2024 Report']);
+      addLogEntry('Answer synthesized. Primary entity: Dr. Sarah Chen (conf: 0.87). Source: NeurIPS 2024 presentation.');
+    }, 1800);
+  }, 1400);
+}
+
+function setStatus(state) {
+  statusEl.className = 'agent-status glass-3 ' + state;
+  const labels = { thinking:'Thinking…', traversing:'Traversing', done:'Done' };
+  statusText.textContent = labels[state] || 'Ready';
+}
+
+function showActivePath() {
+  const e1 = document.getElementById('active-edge-1');
+  const e2 = document.getElementById('active-edge-2');
+  e1.style.display = 'block';
+  e1.classList.add('active');
+  setTimeout(() => {
+    e2.style.display = 'block';
+    e2.classList.add('active');
+  }, 600);
+  setTimeout(() => {
+    e1.style.display = 'none'; e1.classList.remove('active');
+    e2.style.display = 'none'; e2.classList.remove('active');
+  }, 3000);
+}
+
+function addLogEntry(msg) {
+  const log = document.getElementById('agent-log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<div class="log-bubble glass-3">${msg}</div>
+    <div class="log-meta">${new Date().toLocaleTimeString('en',{hour12:false})} · agent</div>`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+/* ─── NODE HOVER DIMMING ────────────────────────────── */
+document.querySelectorAll('.node-circle').forEach(n => {
+  n.addEventListener('mouseenter', () => {
+    document.querySelectorAll('.node-circle').forEach(o => {
+      o.style.opacity = o === n ? '1' : '0.3';
+    });
+  });
+  n.addEventListener('mouseleave', () => {
+    document.querySelectorAll('.node-circle').forEach(o => { o.style.opacity = '1'; });
+  });
+});
+</script>
+</body>
+</html>
