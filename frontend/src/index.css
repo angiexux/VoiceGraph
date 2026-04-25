@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Text ── */
+  --color-text-primary: rgba(30, 36, 60, 0.88);
+  --color-text-secondary: rgba(60, 72, 110, 0.60);
+  --color-text-muted: rgba(80, 100, 140, 0.40);
+
+  /* ── Surfaces ── */
+  --color-bg-primary: #e8edf5;
+  --color-bg-secondary: rgba(255, 255, 255, 0.50);
+  --color-bg-tertiary: rgba(255, 255, 255, 0.32);
+  --color-bg-elevated: rgba(255, 255, 255, 0.20);
+  --color-surface: rgba(255, 255, 255, 0.50);
+  --color-surface-hover: rgba(255, 255, 255, 0.65);
+
+  /* ── Accents ── */
+  --color-accent: #6b8dd6;
+  --color-accent-hover: #5a7dc6;
+  --color-accent-dim: rgba(107, 141, 214, 0.12);
+  --color-accent-violet: #9b6bd6;
+  --color-secondary: #96e0b8;
+  --color-error: #ef4444;
+
+  /* ── Borders ── */
+  --color-border: rgba(255, 255, 255, 0.65);
+  --color-border-subtle: rgba(180, 200, 230, 0.25);
+
+  /* ── Fonts ── */
+  --font-headline: 'Syne', sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  color: var(--color-text-primary);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Mesh gradient background */
+  background:
+    radial-gradient(ellipse 70% 70% at 0% 0%,   rgba(167,190,255,0.30) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 100% 0%,  rgba(200,167,255,0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 60% at 100% 100%,rgba(167,230,210,0.20) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 70% at 0% 100%,  rgba(248,180,200,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 50% at 50% 50%,  rgba(210,195,255,0.15) 0%, transparent 70%),
+    linear-gradient(135deg, #dde8f8 0%, #f0ecfb 45%, #ddf4ee 100%);
+  position: relative;
+}
+
+/* Grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* ── Glass surface system — 4 levels ── */
+.glass-1 {
+  background: rgba(255, 255, 255, 0.50);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.80);
+  border-radius: 16px;
+  box-shadow: 0 8px 48px rgba(100, 120, 200, 0.10), 0 2px 8px rgba(100, 120, 200, 0.06);
+}
+
+.glass-2 {
+  background: rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 12px;
+}
+
+.glass-3 {
+  background: rgba(255, 255, 255, 0.20);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  border-radius: 8px;
+}
+
+.glass-4 {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+}
+
+/* ── Legacy .panel compat — now maps to glass-1 ── */
+.panel {
+  background: rgba(255, 255, 255, 0.50);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.80);
+  border-radius: 16px;
+  box-shadow: 0 8px 48px rgba(100, 120, 200, 0.10), 0 2px 8px rgba(100, 120, 200, 0.06);
+}
+
+.panel-inner {
+  background: rgba(255, 255, 255, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  border-radius: 12px;
+}
+
+/* ── Section labels ── */
+.section-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(80, 100, 140, 0.40);
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(180, 200, 230, 0.25);
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 200, 230, 0.30);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(180, 200, 230, 0.50);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 200, 230, 0.30) transparent;
+}
+
+/* ── Stat number ── */
+.stat-number {
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* ── Pulse ring ── */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* ── Pulse dot (logo) ── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+/* ── Fade slide in ── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Slide in from left ── */
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Glow dot ── */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ── Thinking pulse ── */
+@keyframes thinking-pulse {
+  0%, 100% { border-color: rgba(150, 180, 240, 0.6); }
+  50% { border-color: rgba(200, 150, 240, 0.6); }
+}
+
+/* ── Mic button pulse ── */
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(150, 180, 240, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(150, 180, 240, 0); }
+}
+
+/* ── Waveform bars ── */
+@keyframes wave-anim {
+  0%, 100% { height: 4px; }
+  50% { height: 18px; }
+}
+
+/* ── Status dot blink ── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Tool pill ── */
+.tool-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(220, 232, 255, 0.45);
+  border: 1px solid rgba(180, 210, 255, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: #5070b0;
+}
+.tool-pill::before {
+  content: '\203A';
+  font-size: 11px;
+  opacity: 0.7;
+}
