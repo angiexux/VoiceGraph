@@ -60,6 +60,16 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
     const col = collection.trim() || 'Default';
 
     try {
+      const parseResp = async (resp: Response) => {
+        const text = await resp.text();
+        if (!text) throw new Error(`Server returned empty response (HTTP ${resp.status})`);
+        try {
+          return JSON.parse(text);
+        } catch {
+          throw new Error(resp.ok ? 'Invalid server response' : `HTTP ${resp.status}: ${text.slice(0, 120)}`);
+        }
+      };
+
       if (selected === 'text' && textInput.trim()) {
         const resp = await fetch('/api/ingest', {
           method: 'POST',
@@ -70,7 +80,8 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
             options: { collection_name: col },
           }),
         });
-        const data = await resp.json();
+        const data = await parseResp(resp);
+        if (data.detail) throw new Error(data.detail);
         if (data.error) throw new Error(data.error);
         startIngestion(data.job_id);
       } else if (selected === 'link' && linkInput.trim()) {
@@ -84,7 +95,8 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
             options: { collection_name: col },
           }),
         });
-        const data = await resp.json();
+        const data = await parseResp(resp);
+        if (data.detail) throw new Error(data.detail);
         if (data.error) throw new Error(data.error);
         startIngestion(data.job_id);
       } else if ((selected === 'file' || selected === 'folder' || selected === 'audio') && fileRef.current?.files?.[0]) {
@@ -95,7 +107,8 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
         formData.append('source_type', st);
         formData.append('collection_name', collection);
         const resp = await fetch('/api/ingest/file', { method: 'POST', body: formData });
-        const data = await resp.json();
+        const data = await parseResp(resp);
+        if (data.detail) throw new Error(data.detail);
         if (data.error) throw new Error(data.error);
         startIngestion(data.job_id);
       }
