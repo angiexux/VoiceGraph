@@ -24,6 +24,9 @@ interface VoiceState {
   // Legacy transcript (for compatibility)
   transcript: { role: 'user' | 'agent'; text: string; timestamp: number }[];
 
+  // Suggested question chips shown after ingestion
+  suggestedQuestions: string[];
+
   setConnected: (connected: boolean) => void;
   setRecording: (recording: boolean) => void;
   setPanelOpen: (open: boolean) => void;
@@ -31,6 +34,8 @@ interface VoiceState {
   addActivity: (type: ActivityType, text: string, extra?: Partial<ActivityEntry>) => void;
   updateActivity: (id: string, updates: Partial<ActivityEntry>) => void;
   clearTranscript: () => void;
+  setSuggestedQuestions: (questions: string[]) => void;
+  clearSuggestedQuestions: () => void;
 }
 
 let _activityId = 0;
@@ -41,6 +46,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   isPanelOpen: false,
   activity: [],
   transcript: [],
+  suggestedQuestions: [],
 
   setConnected: (connected) => set({ isConnected: connected }),
   setRecording: (recording) => set({ isRecording: recording }),
@@ -80,4 +86,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
     })),
 
   clearTranscript: () => set({ transcript: [], activity: [] }),
+
+  setSuggestedQuestions: (questions) => set({ suggestedQuestions: questions }),
+  clearSuggestedQuestions: () => set({ suggestedQuestions: [] }),
 }));

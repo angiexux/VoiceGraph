@@ -18,3 +18,11 @@ openai-whisper
 metaphone
 python-docx
 pypdf
+rank_bm25
+openpyxl
+duckdb
+python-pptx
+google-auth-oauthlib
+google-api-python-client
+apscheduler
+slack-bolt

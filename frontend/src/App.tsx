@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import GraphView from './components/Graph/GraphView';
 import QueryView from './components/QueryView/QueryView';
 import OntologyView from './components/OntologyView/OntologyView';
+import { WikiView } from './components/WikiView/WikiView';
 import InfoSidebar from './components/InfoSidebar/InfoSidebar';
 import TopBar from './components/TopBar/TopBar';
 import BottomSheet from './components/BottomSheet/BottomSheet';
@@ -17,7 +18,7 @@ import { useAudioPlayback } from './hooks/useAudioPlayback';
 import { useGraphStore } from './stores/graphStore';
 
 
-export type View = 'graph' | 'query' | 'ontology' | 'mind';
+export type View = 'graph' | 'query' | 'ontology' | 'mind' | 'wiki';
 
 /** Parse raw API graph response into store-compatible format */
 function parseGraphResponse(data: any) {
@@ -145,6 +146,7 @@ function App() {
         )}
         {currentView === 'query' && <QueryView sendEvent={sendEvent} />}
         {currentView === 'ontology' && <OntologyView />}
+        {currentView === 'wiki' && <WikiView />}
 
         <div className="absolute top-4 right-4 z-10">
           <ThoughtStream />

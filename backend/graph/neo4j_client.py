@@ -462,6 +462,63 @@ class Neo4jClient:
         return rows[0]["id"] if rows else ""
 
     # ------------------------------------------------------------------
+    # Vector index and embedding helpers
+    # ------------------------------------------------------------------
+
+    async def ensure_vector_index(self) -> None:
+        """Create the Neo4j vector index for entity embeddings if it doesn't exist.
+
+        Uses KGNode label (added to all ingested nodes) with 768 dimensions (text-embedding-004).
+        Safe to call on every startup — IF NOT EXISTS makes it idempotent.
+        """
+        if not self._available:
+            return
+        try:
+            await self.execute_query(
+                """
+                CREATE VECTOR INDEX entity_embeddings IF NOT EXISTS
+                FOR (n:KGNode) ON (n.embedding)
+                OPTIONS {indexConfig: {
+                    `vector.dimensions`: 768,
+                    `vector.similarity_function`: 'cosine'
+                }}
+                """
+            )
+            logger.info("Vector index 'entity_embeddings' ensured.")
+        except Exception as exc:
+            logger.warning("Could not create vector index (may already exist): %s", exc)
+
+    async def store_entity_embedding(self, entity_name: str, embedding: list[float]) -> None:
+        """Store a text embedding on a KGNode matched by name."""
+        if not self._available:
+            return
+        try:
+            await self.execute_query(
+                "MATCH (n:KGNode {name: $name}) SET n.embedding = $embedding",
+                {"name": entity_name, "embedding": embedding},
+            )
+        except Exception as exc:
+            logger.warning("Failed to store embedding for '%s': %s", entity_name, exc)
+
+    async def get_all_entities_for_index(self) -> list[dict]:
+        """Return all KGNode entities (id, name, description) for BM25 index rebuild."""
+        if not self._available:
+            return []
+        try:
+            return await self.execute_query(
+                """
+                MATCH (n:KGNode)
+                WHERE n.name IS NOT NULL
+                RETURN elementId(n) AS id, n.name AS name,
+                       coalesce(n.description, '') AS description
+                ORDER BY n.name
+                """
+            )
+        except Exception as exc:
+            logger.warning("Failed to fetch entities for index: %s", exc)
+            return []
+
+    # ------------------------------------------------------------------
     # Sample-data fallback helpers
     # ------------------------------------------------------------------
 

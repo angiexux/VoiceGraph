@@ -15,6 +15,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from api.routes import router as graph_router
+from api.wiki_routes import router as wiki_router
+from api.drive_routes import router as drive_router
+from api.slack_routes import router as slack_router, set_slack_handler
 from user.profile import router as user_router
 from graph.neo4j_client import Neo4jClient
 from ingestion.job_manager import JobManager
@@ -445,6 +448,16 @@ async def lifespan(app: FastAPI):
     agent_ctx.ontology_manager = app.state.ontology_manager
     agent_ctx.ws_broadcast = broadcast_event
 
+    # Initialize Slack bot (optional — requires SLACK_BOT_TOKEN + SLACK_SIGNING_SECRET)
+    try:
+        from integrations.slack_bot import create_slack_app
+        slack_app = create_slack_app(client)
+        if slack_app:
+            set_slack_handler(slack_app)
+            logger.info("Slack bot initialized.")
+    except Exception as exc:
+        logger.warning("Slack bot initialization failed: %s", exc)
+
     yield
     await client.close()
 
@@ -469,7 +482,10 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 app.include_router(graph_router)
+app.include_router(wiki_router)
 app.include_router(user_router)
+app.include_router(drive_router)
+app.include_router(slack_router)
 
 
 # ---------------------------------------------------------------------------

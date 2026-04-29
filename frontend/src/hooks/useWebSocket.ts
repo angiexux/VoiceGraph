@@ -110,6 +110,10 @@ export function useWebSocket(onAudioChunk?: (base64Data: string) => void) {
             }
             break;
           }
+          case 'suggested_questions':
+            useVoiceStore.getState().setSuggestedQuestions(data.questions || []);
+            break;
+
           case 'ontology_changed':
           case 'csv_analysis':
             break;

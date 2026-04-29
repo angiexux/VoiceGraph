@@ -412,6 +412,11 @@ TEXT:
             **stats,
         })
 
+        # Fire embedding + BM25 rebuild in the background (non-blocking)
+        if self._neo4j is not None and unique_entities:
+            import asyncio
+            asyncio.create_task(self._post_process_embeddings(unique_entities))
+
         return stats
 
     # ------------------------------------------------------------------
@@ -736,7 +741,7 @@ TEXT:
                 "document_created_at": self._metadata.get("document_created_at", ""),
             }
             cypher = (
-                f"MERGE (n:{label} {{name: $name}}) "
+                f"MERGE (n:{label}:KGNode {{name: $name}}) "
                 f"SET n.description = $description, n.entity_type = $entity_type, "
                 f"n.ingested_at = $ingested_at, n.source_type = $source_type, "
                 f"n.collection_name = $collection_name, n.context = $context, "
@@ -803,6 +808,50 @@ TEXT:
                 )
 
         return count
+
+    async def _post_process_embeddings(self, entities: list[dict[str, Any]]) -> None:
+        """Background: embed entities and rebuild BM25 index after ingestion."""
+        import asyncio
+
+        if self._neo4j is None or not self._neo4j.available:
+            return
+
+        # Ensure vector index exists (idempotent)
+        try:
+            await self._neo4j.ensure_vector_index()
+        except Exception as exc:
+            logger.warning("Vector index setup failed: %s", exc)
+
+        # Embed each entity and store on the Neo4j node
+        try:
+            from retrieval.embedder import get_embedding
+
+            for entity in entities:
+                name = entity.get("name", "")
+                description = entity.get("description", "")
+                if not name:
+                    continue
+                text = f"{name}. {description}" if description else name
+                embedding = await get_embedding(text)
+                if embedding:
+                    await self._neo4j.store_entity_embedding(name, embedding)
+
+            logger.info("Embedded %d entities.", len(entities))
+        except Exception as exc:
+            logger.warning("Embedding pass failed: %s", exc)
+
+        # Rebuild BM25 index from all current entities in Neo4j
+        try:
+            from retrieval.bm25_retriever import get_bm25_retriever
+
+            all_entities = await self._neo4j.get_all_entities_for_index()
+            if all_entities:
+                bm25 = get_bm25_retriever()
+                import asyncio
+                await asyncio.to_thread(bm25.build, all_entities)
+                logger.info("BM25 index rebuilt with %d entities.", len(all_entities))
+        except Exception as exc:
+            logger.warning("BM25 rebuild failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Full pipeline

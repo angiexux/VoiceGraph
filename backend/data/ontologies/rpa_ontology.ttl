@@ -1,0 +1,130 @@
+@prefix vg: <http://voicegraph.ai/ontology/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ---- Classes ----
+
+vg:PhilanthropicInitiative a owl:Class ;
+    rdfs:label "PhilanthropicInitiative" ;
+    rdfs:comment "A named philanthropic program, campaign, or strategic initiative." .
+
+vg:FundingProgram a owl:Class ;
+    rdfs:subClassOf vg:PhilanthropicInitiative ;
+    rdfs:label "FundingProgram" ;
+    rdfs:comment "A specific grantmaking or funding program with defined scope." .
+
+vg:FiscalProject a owl:Class ;
+    rdfs:subClassOf vg:PhilanthropicInitiative ;
+    rdfs:label "FiscalProject" ;
+    rdfs:comment "A fiscally sponsored project or donor initiative managed by RPA." .
+
+vg:Grantee a owl:Class ;
+    rdfs:label "Grantee" ;
+    rdfs:comment "An organization or individual receiving philanthropic funding." .
+
+vg:Funder a owl:Class ;
+    rdfs:label "Funder" ;
+    rdfs:comment "A foundation, corporation, government agency, or individual donor providing funding." .
+
+vg:ImpactArea a owl:Class ;
+    rdfs:label "ImpactArea" ;
+    rdfs:comment "A thematic focus area or cause area (e.g. climate, education, health equity)." .
+
+vg:StrategicFramework a owl:Class ;
+    rdfs:label "StrategicFramework" ;
+    rdfs:comment "A theory of change, strategic plan, or philanthropic framework." .
+
+vg:PolicyContext a owl:Class ;
+    rdfs:label "PolicyContext" ;
+    rdfs:comment "A policy, regulation, or legislative context relevant to philanthropic work." .
+
+vg:Organization a owl:Class ;
+    rdfs:label "Organization" ;
+    rdfs:comment "A non-profit, foundation, government agency, or other institutional actor." .
+
+vg:Person a owl:Class ;
+    rdfs:label "Person" ;
+    rdfs:comment "A named individual — program officer, advisor, researcher, or leader." .
+
+vg:Publication a owl:Class ;
+    rdfs:label "Publication" ;
+    rdfs:comment "A report, handbook, case study, field guide, or research paper." .
+
+vg:GeographicFocus a owl:Class ;
+    rdfs:label "GeographicFocus" ;
+    rdfs:comment "A geographic region, city, or community targeted by philanthropic work." .
+
+# ---- Object Properties ----
+
+vg:FUNDS a owl:ObjectProperty ;
+    rdfs:label "FUNDS" ;
+    rdfs:domain vg:Funder ;
+    rdfs:range vg:Grantee ;
+    rdfs:comment "A funder provides grants or financial support to a grantee." .
+
+vg:MANAGES a owl:ObjectProperty ;
+    rdfs:label "MANAGES" ;
+    rdfs:domain vg:Organization ;
+    rdfs:range vg:FiscalProject ;
+    rdfs:comment "An organization manages a fiscal sponsorship project." .
+
+vg:ADVISES a owl:ObjectProperty ;
+    rdfs:label "ADVISES" ;
+    rdfs:domain vg:Person ;
+    rdfs:range vg:Funder ;
+    rdfs:comment "An advisor or consultant advises a funder on strategy." .
+
+vg:TARGETS_IMPACT_AREA a owl:ObjectProperty ;
+    rdfs:label "TARGETS_IMPACT_AREA" ;
+    rdfs:domain vg:FundingProgram ;
+    rdfs:range vg:ImpactArea ;
+    rdfs:comment "A funding program is aimed at a specific impact area." .
+
+vg:ALIGNS_WITH a owl:ObjectProperty ;
+    rdfs:label "ALIGNS_WITH" ;
+    rdfs:domain vg:FundingProgram ;
+    rdfs:range vg:StrategicFramework ;
+    rdfs:comment "A program aligns with or is guided by a strategic framework." .
+
+vg:INFORMED_BY a owl:ObjectProperty ;
+    rdfs:label "INFORMED_BY" ;
+    rdfs:domain vg:PhilanthropicInitiative ;
+    rdfs:range vg:Publication ;
+    rdfs:comment "An initiative is informed by or based on a publication or research." .
+
+vg:OPERATES_IN a owl:ObjectProperty ;
+    rdfs:label "OPERATES_IN" ;
+    rdfs:domain vg:Organization ;
+    rdfs:range vg:GeographicFocus ;
+    rdfs:comment "An organization operates in a geographic area." .
+
+vg:AUTHORED_BY a owl:ObjectProperty ;
+    rdfs:label "AUTHORED_BY" ;
+    rdfs:domain vg:Publication ;
+    rdfs:range vg:Person ;
+    rdfs:comment "A publication was authored or co-authored by a person." .
+
+vg:PUBLISHED_BY a owl:ObjectProperty ;
+    rdfs:label "PUBLISHED_BY" ;
+    rdfs:domain vg:Publication ;
+    rdfs:range vg:Organization ;
+    rdfs:comment "A publication was published or released by an organization." .
+
+vg:SHAPED_BY a owl:ObjectProperty ;
+    rdfs:label "SHAPED_BY" ;
+    rdfs:domain vg:StrategicFramework ;
+    rdfs:range vg:PolicyContext ;
+    rdfs:comment "A strategic framework is shaped by or responds to a policy context." .
+
+vg:PARTNER_OF a owl:ObjectProperty ;
+    rdfs:label "PARTNER_OF" ;
+    rdfs:domain vg:Organization ;
+    rdfs:range vg:Organization ;
+    rdfs:comment "Two organizations are partners or collaborators." .
+
+vg:WORKS_AT a owl:ObjectProperty ;
+    rdfs:label "WORKS_AT" ;
+    rdfs:domain vg:Person ;
+    rdfs:range vg:Organization ;
+    rdfs:comment "A person works at or is affiliated with an organization." .

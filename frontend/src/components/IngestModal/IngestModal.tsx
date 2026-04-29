@@ -10,9 +10,16 @@ interface IngestModalProps {
 
 export default function IngestModal({ onClose }: IngestModalProps) {
   const [inputText, setInputText] = useState('');
-  const [inputMode, setInputMode] = useState<'text' | 'url' | 'youtube'>('text');
+  const [inputMode, setInputMode] = useState<'text' | 'url' | 'youtube' | 'drive'>('text');
   const [collapsed, setCollapsed] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
+
+  // Google Drive state
+  const [driveAuthenticated, setDriveAuthenticated] = useState(false);
+  const [driveFolderId, setDriveFolderId] = useState('');
+  const [driveFolderName, setDriveFolderName] = useState('');
+  const [driveSyncing, setDriveSyncing] = useState(false);
+  const [driveMessage, setDriveMessage] = useState('');
 
   const {
     isIngesting,
@@ -44,6 +51,52 @@ export default function IngestModal({ onClose }: IngestModalProps) {
       setCollapsed(true);
     }
   }, [status]);
+
+  // Poll Drive auth status whenever the Drive tab is active
+  useEffect(() => {
+    if (inputMode !== 'drive') return;
+    fetch(`${API_BASE}/api/drive/status`)
+      .then((r) => r.json())
+      .then((data) => setDriveAuthenticated(!!data.authenticated))
+      .catch(() => {});
+  }, [inputMode]);
+
+  const handleDriveConnect = useCallback(() => {
+    fetch(`${API_BASE}/api/drive/auth`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.auth_url) {
+          window.open(data.auth_url, '_blank', 'width=600,height=700');
+          // Re-check auth status after a short delay (user may close popup quickly)
+          setTimeout(() => {
+            fetch(`${API_BASE}/api/drive/status`)
+              .then((r) => r.json())
+              .then((d) => setDriveAuthenticated(!!d.authenticated))
+              .catch(() => {});
+          }, 3000);
+        }
+      })
+      .catch(() => setDriveMessage('Failed to start OAuth flow.'));
+  }, []);
+
+  const handleDriveSync = useCallback(async () => {
+    if (!driveFolderId.trim()) return;
+    setDriveSyncing(true);
+    setDriveMessage('');
+    try {
+      const res = await fetch(`${API_BASE}/api/drive/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder_id: driveFolderId.trim(), folder_name: driveFolderName.trim() }),
+      });
+      const data = await res.json();
+      setDriveMessage(data.message || (res.ok ? 'Sync started.' : 'Sync failed.'));
+    } catch {
+      setDriveMessage('Network error.');
+    } finally {
+      setDriveSyncing(false);
+    }
+  }, [driveFolderId, driveFolderName]);
 
   const handleIngest = useCallback(
     async (sourceType: string, content: string) => {
@@ -128,7 +181,7 @@ export default function IngestModal({ onClose }: IngestModalProps) {
           <div className="px-5 pb-4 space-y-3">
             {/* Mode tabs */}
             <div className="flex rounded-lg p-0.5 glass-3">
-              {(['text', 'url', 'youtube'] as const).map((mode) => (
+              {(['text', 'url', 'youtube', 'drive'] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setInputMode(mode)}
@@ -138,51 +191,111 @@ export default function IngestModal({ onClose }: IngestModalProps) {
                       : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
-                  {mode === 'youtube' ? 'YouTube' : mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  {mode === 'youtube' ? 'YouTube' : mode === 'drive' ? 'Drive' : mode.charAt(0).toUpperCase() + mode.slice(1)}
                 </button>
               ))}
             </div>
 
-            {/* Input */}
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={
-                inputMode === 'text'
-                  ? 'Paste any text — articles, notes, research papers...'
-                  : inputMode === 'url'
-                    ? 'https://...'
-                    : 'YouTube URL...'
-              }
-              className="w-full rounded-lg glass-3 px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none resize-none transition-all"
-              rows={4}
-            />
+            {/* Drive panel */}
+            {inputMode === 'drive' ? (
+              <div className="space-y-3">
+                <p className="text-[12px] text-text-secondary">
+                  Connect your Google Drive folder to auto-import documents.
+                </p>
 
-            {/* Actions */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleSubmit}
-                disabled={!inputText.trim()}
-                className={`flex-1 rounded-lg px-4 py-2.5 text-[12px] font-medium transition-all ${
-                  !inputText.trim()
-                    ? 'glass-3 text-text-muted cursor-not-allowed'
-                    : 'text-white hover:shadow-md'
-                }`}
-                style={inputText.trim() ? {
-                  background: 'linear-gradient(135deg, #6b8dd6, #9b6bd6)',
-                } : {}}
-              >
-                Extract Knowledge
-              </button>
+                {!driveAuthenticated ? (
+                  <button
+                    onClick={handleDriveConnect}
+                    className="w-full rounded-lg px-4 py-2.5 text-[12px] font-medium text-white hover:shadow-md transition-all"
+                    style={{ background: 'linear-gradient(135deg, #4285f4, #34a853)' }}
+                  >
+                    Connect Google Drive
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-[11px]" style={{ color: '#34a853' }}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      Google Drive connected
+                    </div>
+                    <input
+                      type="text"
+                      value={driveFolderId}
+                      onChange={(e) => setDriveFolderId(e.target.value)}
+                      placeholder="Folder ID (from Drive URL)"
+                      className="w-full rounded-lg glass-3 px-4 py-2.5 text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none transition-all"
+                    />
+                    <input
+                      type="text"
+                      value={driveFolderName}
+                      onChange={(e) => setDriveFolderName(e.target.value)}
+                      placeholder="Folder name (optional)"
+                      className="w-full rounded-lg glass-3 px-4 py-2.5 text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none transition-all"
+                    />
+                    <button
+                      onClick={handleDriveSync}
+                      disabled={!driveFolderId.trim() || driveSyncing}
+                      className={`w-full rounded-lg px-4 py-2.5 text-[12px] font-medium transition-all ${
+                        !driveFolderId.trim() || driveSyncing
+                          ? 'glass-3 text-text-muted cursor-not-allowed'
+                          : 'text-white hover:shadow-md'
+                      }`}
+                      style={driveFolderId.trim() && !driveSyncing ? {
+                        background: 'linear-gradient(135deg, #6b8dd6, #9b6bd6)',
+                      } : {}}
+                    >
+                      {driveSyncing ? 'Syncing...' : 'Sync Folder'}
+                    </button>
+                  </div>
+                )}
 
-              <label className="flex items-center justify-center rounded-lg glass-3 px-4 py-2.5 text-[12px] font-medium text-text-secondary hover:text-text-primary transition-all cursor-pointer">
-                <svg className="h-3.5 w-3.5 mr-1.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-8m-4 4l4-4 4 4M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                PDF
-                <input type="file" accept=".pdf" onChange={handleFileUpload} className="hidden" />
-              </label>
-            </div>
+                {driveMessage && (
+                  <p className="text-[11px] text-text-secondary rounded-lg glass-3 px-3 py-2">{driveMessage}</p>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Input */}
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={
+                    inputMode === 'text'
+                      ? 'Paste any text — articles, notes, research papers...'
+                      : inputMode === 'url'
+                        ? 'https://...'
+                        : 'YouTube URL...'
+                  }
+                  className="w-full rounded-lg glass-3 px-4 py-3 text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none resize-none transition-all"
+                  rows={4}
+                />
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!inputText.trim()}
+                    className={`flex-1 rounded-lg px-4 py-2.5 text-[12px] font-medium transition-all ${
+                      !inputText.trim()
+                        ? 'glass-3 text-text-muted cursor-not-allowed'
+                        : 'text-white hover:shadow-md'
+                    }`}
+                    style={inputText.trim() ? {
+                      background: 'linear-gradient(135deg, #6b8dd6, #9b6bd6)',
+                    } : {}}
+                  >
+                    Extract Knowledge
+                  </button>
+
+                  <label className="flex items-center justify-center rounded-lg glass-3 px-4 py-2.5 text-[12px] font-medium text-text-secondary hover:text-text-primary transition-all cursor-pointer">
+                    <svg className="h-3.5 w-3.5 mr-1.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-8m-4 4l4-4 4 4M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Upload File
+                    <input type="file" accept=".pdf,.docx,.xlsx,.xls,.pptx,.png,.jpg,.jpeg,.gif,.webp,.tiff,.tif,.bmp" onChange={handleFileUpload} className="hidden" />
+                  </label>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

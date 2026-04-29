@@ -11,6 +11,10 @@ from .pdf_parser import parse_pdf
 from .url_parser import parse_url
 from .youtube_parser import parse_youtube
 from .text_parser import parse_text
+from .docx_parser import parse_docx
+from .xlsx_parser import parse_xlsx
+from .pptx_parser import parse_pptx
+from .image_parser import parse_image, SUPPORTED_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,10 @@ PARSER_MAP = {
     "youtube": parse_youtube,
     "text": parse_text,
     "markdown": parse_text,
+    "docx": parse_docx,
+    "xlsx": parse_xlsx,
+    "pptx": parse_pptx,
+    "image": parse_image,
 }
 
 
@@ -46,6 +54,14 @@ async def parse_document(source: str, source_type: str) -> str:
             source_type = "youtube"
         elif source.startswith("http://") or source.startswith("https://"):
             source_type = "url"
+        elif source.lower().endswith(".docx"):
+            source_type = "docx"
+        elif source.lower().endswith((".xlsx", ".xls")):
+            source_type = "xlsx"
+        elif source.lower().endswith(".pptx"):
+            source_type = "pptx"
+        elif any(source.lower().endswith(ext) for ext in SUPPORTED_EXTENSIONS):
+            source_type = "image"
         else:
             source_type = "text"
 

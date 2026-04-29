@@ -154,6 +154,13 @@ export interface ErrorEvent {
   message: string;
 }
 
+// Suggested question chips pushed after ingestion completes
+export interface SuggestedQuestionsEvent {
+  type: 'suggested_questions';
+  job_id?: string;
+  questions: string[];
+}
+
 export type ServerEvent =
   | AudioChunkEvent
   | TranscriptEvent
@@ -170,4 +177,5 @@ export type ServerEvent =
   | IngestionStatusEvent
   | OntologyChangedEvent
   | CSVAnalysisEvent
-  | ErrorEvent;
+  | ErrorEvent
+  | SuggestedQuestionsEvent;

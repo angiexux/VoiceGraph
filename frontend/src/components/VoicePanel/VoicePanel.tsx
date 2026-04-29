@@ -10,6 +10,13 @@ interface VoicePanelProps {
 export default function VoicePanel({ sendEvent }: VoicePanelProps) {
   const isConnected = useVoiceStore((s) => s.isConnected);
   const isRecording = useVoiceStore((s) => s.isRecording);
+  const suggestedQuestions = useVoiceStore((s) => s.suggestedQuestions);
+  const clearSuggestedQuestions = useVoiceStore((s) => s.clearSuggestedQuestions);
+
+  const sendTextQuery = useCallback(
+    (text: string) => sendEvent({ type: 'text_input', text }),
+    [sendEvent],
+  );
 
   const { startRecording, stopRecording, analyserRef } = useAudioCapture({ sendEvent });
 
@@ -70,7 +77,30 @@ export default function VoicePanel({ sendEvent }: VoicePanelProps) {
   }, [isRecording, analyserRef]);
 
   return (
-    <div className="flex items-center gap-1.5 shrink-0">
+    <div className="flex flex-col gap-0 shrink-0">
+      {/* Suggested question chips — visible after ingestion */}
+      {suggestedQuestions.length > 0 && (
+        <div className="suggested-questions p-3 border-t border-white/10">
+          <p className="text-xs text-white/50 mb-2 uppercase tracking-wide">Suggested questions</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.map((q, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  sendTextQuery(q);
+                  clearSuggestedQuestions();
+                }}
+                className="text-xs bg-white/10 hover:bg-white/20 text-white/80 hover:text-white px-3 py-1.5 rounded-full border border-white/20 transition-all text-left"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Voice controls */}
+      <div className="flex items-center gap-1.5">
       {/* Waveform — only when recording */}
       {isRecording && (
         <canvas ref={canvasRef} width={25} height={20} className="shrink-0 opacity-80" />
@@ -107,6 +137,7 @@ export default function VoicePanel({ sendEvent }: VoicePanelProps) {
           </svg>
         )}
       </button>
+      </div>
     </div>
   );
 }

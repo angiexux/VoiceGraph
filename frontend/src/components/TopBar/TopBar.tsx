@@ -8,8 +8,7 @@ interface TopBarProps {
 }
 
 export default function TopBar(props: TopBarProps) {
-  const { onIngest } = props;
-  // currentView and onViewChange available via props if needed later
+  const { onIngest, currentView, onViewChange } = props;
   const nodes = useGraphStore((s) => s.nodes);
   const edges = useGraphStore((s) => s.edges);
 
@@ -98,8 +97,24 @@ export default function TopBar(props: TopBarProps) {
           })}
       </div>
 
-      {/* Right: stats + ingest */}
+      {/* Right: wiki toggle + stats + ingest */}
       <div className="flex items-center gap-2.5 shrink-0">
+        <button
+          onClick={() => onViewChange(currentView === 'wiki' ? 'graph' : 'wiki')}
+          className="text-[12px] font-medium px-3 py-1.5 rounded-[10px] transition-all hover:shadow-md"
+          style={{
+            background: currentView === 'wiki'
+              ? 'linear-gradient(135deg, rgba(107,141,214,0.35), rgba(155,107,214,0.28))'
+              : 'rgba(255,255,255,0.08)',
+            border: currentView === 'wiki'
+              ? '1px solid rgba(107,141,214,0.6)'
+              : '1px solid rgba(180,200,230,0.25)',
+            color: currentView === 'wiki' ? '#6b8dd6' : 'rgba(30,36,60,0.55)',
+            letterSpacing: '0.01em',
+          }}
+        >
+          Wiki
+        </button>
         <div className="glass-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md">
           <span className="text-[10px] text-text-secondary" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Nodes</span>
           <span className="text-[10px] font-medium text-text-primary" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{nodes.length}</span>

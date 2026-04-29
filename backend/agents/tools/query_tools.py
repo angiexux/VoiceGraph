@@ -104,25 +104,25 @@ async def _run_cypher(template_key: str, params: dict[str, Any] | None = None,
 
 async def search_concepts(query: str, top_k: int = 10) -> dict:
     """Semantic search across all entities in the knowledge graph.
-    Uses vector embeddings to find conceptually similar entities.
-    Returns matching entities with similarity scores.
+    Uses hybrid BM25 + vector embeddings + GraphRAG to find conceptually similar entities.
+    Returns matching entities with similarity scores and a subgraph context string.
     Use when: user asks about a topic broadly, e.g. 'What do we know about climate change?'"""
 
+    try:
+        from retrieval.hybrid_retriever import hybrid_search
+        result = await hybrid_search(query, ctx.neo4j_client, top_k=top_k)
+        if result.get("count", 0) > 0:
+            return result
+    except Exception as exc:
+        logger.warning("Hybrid search failed, falling back to substring: %s", exc)
+
+    # Substring fallback
     results = await _run_cypher("search_concepts", {"query": query, "top_k": top_k})
-
-    if results:
-        return {
-            "results": results,
-            "count": len(results),
-            "query": query,
-        }
-
-    # Fallback: mock data when Neo4j is not connected
     return {
-        "results": [],
-        "count": 0,
+        "results": results,
+        "count": len(results),
         "query": query,
-        "message": "No results found. Neo4j may not be connected — using substring match fallback.",
+        "subgraph_context": "",
     }
 
 
@@ -232,24 +232,55 @@ async def find_path(entity_a: str, entity_b: str, max_hops: int = 5) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def query_graph(question: str) -> dict:
-    """For complex analytical questions that require custom graph queries.
-    Translates natural language to Cypher using the current graph schema.
-    Use when: other tools are insufficient for the question's complexity,
+async def query_graph(question: str) -> dict:
+    """For complex analytical questions requiring custom Cypher queries.
+    Generates Cypher from natural language using the current graph schema.
+    Use when: filters, aggregations, or conditions other tools cannot handle,
     e.g. 'Which organizations have more than 5 people?'"""
 
-    # TODO: Implement Text2Cypher via Gemini
-    # 1. Fetch graph schema (labels, relationship types, property keys)
-    # 2. Send schema + question + few-shot examples to Gemini
-    # 3. Gemini generates Cypher → execute → return results
-    return {
-        "question": question,
-        "cypher": None,
-        "results": [],
-        "message": "Text2Cypher not yet implemented. This will use Gemini to "
-                   "translate your question into a Cypher query. For now, try "
-                   "search_concepts or explore_entity instead.",
-    }
+    import os, json
+
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return {"question": question, "results": [], "message": "No API key configured."}
+
+    # Get schema for context
+    schema_rows = await _run_cypher("entity_types")
+    rel_rows = await _run_cypher("relationship_types")
+    schema_summary = (
+        "Node types: " + ", ".join(r.get("types", ["?"])[0] for r in schema_rows[:15] if r.get("types")) +
+        "\nRelationship types: " + ", ".join(r.get("type", "?") for r in rel_rows[:15])
+    )
+
+    prompt = f"""You are a Neo4j Cypher expert. Generate a single valid Cypher query for this question.
+
+GRAPH SCHEMA:
+{schema_summary}
+
+QUESTION: {question}
+
+RULES:
+- Return ONLY the Cypher query, no explanation
+- Use MATCH, WHERE, RETURN with LIMIT 25
+- Use toLower() for case-insensitive name matching
+- Always include LIMIT
+
+Cypher query:"""
+
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=genai.types.GenerateContentConfig(response_mime_type="text/plain"),
+        )
+        cypher = response.text.strip().strip("```").replace("cypher\n", "").strip()
+        results = await _run_cypher(None, raw_cypher=cypher)
+        return {"question": question, "cypher": cypher, "results": results, "count": len(results)}
+    except Exception as exc:
+        logger.warning("Text2Cypher failed: %s", exc)
+        return {"question": question, "results": [], "message": f"Query generation failed: {exc}"}
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +299,7 @@ async def deep_search(query: str, top_k: int = 5) -> dict:
     # Step 1: Find anchor entities
     search_results = await search_concepts(query, top_k=top_k)
     anchors = search_results.get("results", [])
+    subgraph_context = search_results.get("subgraph_context", "")
 
     if not anchors:
         return {
@@ -294,6 +326,7 @@ async def deep_search(query: str, top_k: int = 5) -> dict:
         "expanded_context": expanded,
         "total_anchors": len(anchors),
         "total_expanded": len(expanded),
+        "subgraph_context": subgraph_context,
     }
 
 

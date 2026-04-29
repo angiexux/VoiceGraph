@@ -11,7 +11,7 @@ interface BottomSheetProps {
 const INPUT_OPTIONS: { type: InputType; icon: string; label: string; desc: string; accept?: string }[] = [
   { type: 'text', icon: '✏️', label: 'Text', desc: 'Paste notes, articles, or raw text' },
   { type: 'link', icon: '🔗', label: 'Link', desc: 'URL or YouTube video' },
-  { type: 'file', icon: '📄', label: 'File', desc: 'PDF, DOCX, TXT, Markdown', accept: '.pdf,.docx,.txt,.md' },
+  { type: 'file', icon: '📄', label: 'File', desc: 'PDF, DOCX, XLSX, PPTX, images, and more', accept: '.pdf,.docx,.xlsx,.xls,.pptx,.txt,.md,.png,.jpg,.jpeg,.gif,.webp,.tiff,.tif,.bmp' },
   { type: 'folder', icon: '📁', label: 'Folder', desc: 'ZIP of a folder or second brain export', accept: '.zip' },
   { type: 'audio', icon: '🎧', label: 'Audio', desc: 'MP3, WAV, M4A — transcribed via Whisper', accept: '.mp3,.mp4,.wav,.m4a' },
 ];
@@ -91,7 +91,7 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
         const file = fileRef.current.files[0];
         const formData = new FormData();
         formData.append('file', file);
-        const st = selected === 'folder' ? 'folder' : selected === 'audio' ? 'audio' : 'pdf';
+        const st = selected === 'folder' ? 'folder' : selected === 'audio' ? 'audio' : 'auto';
         formData.append('source_type', st);
         formData.append('collection_name', collection);
         const resp = await fetch('/api/ingest/file', { method: 'POST', body: formData });

@@ -18,6 +18,78 @@ logger = logging.getLogger(__name__)
 BroadcastFn = Callable[[dict[str, Any]], Awaitable[None]]
 
 
+async def _generate_wiki(
+    job_id: str,
+    entities: list[str],
+    relationships: list[str],
+    source_hint: str,
+    neo4j_client: Any,
+    broadcast_fn: BroadcastFn,
+) -> None:
+    """Background task: generate and store a wiki page for a completed ingestion job."""
+    try:
+        from wiki.wiki_generator import generate_wiki_page
+
+        entity_dicts = [{"name": e, "type": "Entity", "description": ""} for e in entities]
+        rel_dicts = [{"source": "", "target": "", "type": r, "description": ""} for r in relationships]
+
+        page = await generate_wiki_page(
+            job_id=job_id,
+            entities=entity_dicts,
+            relationships=rel_dicts,
+            source_hint=source_hint,
+            neo4j_client=neo4j_client,
+        )
+        if page:
+            await broadcast_fn({
+                "type": "wiki_page_ready",
+                "job_id": job_id,
+                "title": page.get("title", ""),
+                "questions": page.get("questions", []),
+            })
+    except Exception as exc:
+        logger.warning("Wiki generation background task failed: %s", exc)
+
+
+async def _generate_suggested_questions(
+    entities: list[str],
+    broadcast_fn: BroadcastFn,
+    job_id: str,
+) -> None:
+    """Generate 3-5 suggested questions from ingested entities using Gemini."""
+    import os
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not api_key or not entities:
+        return
+
+    entity_sample = ", ".join(entities[:20])
+    prompt = f"""Based on these entities just added to a knowledge graph, generate exactly 5 insightful questions that a non-profit staff member might want to ask. Make questions specific to the entities found.
+
+Entities: {entity_sample}
+
+Return a JSON array of 5 question strings only, no other text:
+["Question 1?", "Question 2?", "Question 3?", "Question 4?", "Question 5?"]"""
+
+    try:
+        from google import genai
+        import json
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=genai.types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        questions = json.loads(response.text)
+        if isinstance(questions, list) and questions:
+            await broadcast_fn({
+                "type": "suggested_questions",
+                "job_id": job_id,
+                "questions": questions[:5],
+            })
+    except Exception as exc:
+        logger.warning("Suggested questions generation failed: %s", exc)
+
+
 def _normalize_ingest_node(n: dict[str, Any]) -> dict[str, Any]:
     """Convert a Neo4j-style node dict to frontend GraphNode format."""
     if "label" in n:
@@ -216,6 +288,22 @@ async def run_ingestion(
             "entities_found": entities_found,
             "relationships_found": rels_found,
         })
+
+        # Generate suggested questions in the background
+        import asyncio
+        asyncio.create_task(_generate_suggested_questions(
+            live_entities[:20], broadcast_fn, job_id
+        ))
+
+        # Generate wiki page in background
+        asyncio.create_task(_generate_wiki(
+            job_id=job_id,
+            entities=live_entities,
+            relationships=live_relationships,
+            source_hint=content[:100] if source_type == "text" else source_type,
+            neo4j_client=neo4j_client,
+            broadcast_fn=broadcast_fn,
+        ))
 
         return result
 
