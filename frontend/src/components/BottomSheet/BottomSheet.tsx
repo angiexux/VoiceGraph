@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { useIngestionStore } from '../../stores/ingestionStore';
 
 type InputType = 'text' | 'link' | 'file' | 'folder' | 'audio';
@@ -27,13 +27,89 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const currentJobId = useRef<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startIngestion = useIngestionStore((s) => s.startIngestion);
+  const updateProgress = useIngestionStore((s) => s.updateProgress);
+  const setComplete = useIngestionStore((s) => s.setComplete);
+  const setError2 = useIngestionStore((s) => s.setError);
   const ingestionStatus = useIngestionStore((s) => s.status);
   const ingestionProgress = useIngestionStore((s) => s.progress);
   const entitiesFound = useIngestionStore((s) => s.entitiesFound);
   const relsFound = useIngestionStore((s) => s.relationshipsFound);
   const latestEntity = useIngestionStore((s) => s.latestEntity);
   const phase = useIngestionStore((s) => s.phase);
+  const startedAt = useIngestionStore((s) => s.startedAt);
+  const [elapsed, setElapsed] = useState(0);
+
+  // Poll /api/ingest/{jobId} every 2s as WebSocket fallback
+  useEffect(() => {
+    if (ingestionStatus === 'complete' || ingestionStatus === 'error' || ingestionStatus === 'idle') {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      return;
+    }
+    if (!currentJobId.current) return;
+    if (pollRef.current) return; // already polling
+
+    pollRef.current = setInterval(async () => {
+      const jobId = currentJobId.current;
+      if (!jobId) return;
+      try {
+        const resp = await fetch(`/api/ingest/${jobId}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data.status === 'complete') {
+          setComplete(data.entities_found, data.relationships_found);
+        } else if (data.status === 'error') {
+          setError2(data.error || 'Extraction failed');
+        } else {
+          const raw = data.status as string;
+          const uiStatus =
+            raw === 'started' ? 'parsing'
+            : raw.startsWith('extracting') ? 'extracting'
+            : raw;
+          updateProgress({
+            status: uiStatus,
+            progress: typeof data.progress === 'number' ? data.progress * 100 : undefined,
+            entities: data.entities_found,
+            relationships: data.relationships_found,
+            phase: data.status,
+          });
+        }
+      } catch { /* ignore */ }
+    }, 1000);
+
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  }, [ingestionStatus, updateProgress, setComplete, setError2]);
+
+  useEffect(() => {
+    if (ingestionStatus === 'idle' || ingestionStatus === 'complete' || ingestionStatus === 'error') {
+      setElapsed(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setElapsed(startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [ingestionStatus, startedAt]);
+
+  const formatTime = (secs: number) => {
+    if (secs < 60) return `${secs}s`;
+    return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+  };
+
+  const estimateRemaining = (progress: number, elapsedSecs: number) => {
+    if (progress <= 2 || elapsedSecs < 5) return null;
+    const remaining = Math.max(0, Math.round((elapsedSecs / progress) * 100 - elapsedSecs));
+    return remaining;
+  };
+
+  // If ingestion is active and sheet is reopened, jump straight to progress view
+  useEffect(() => {
+    if (open && ingestionStatus !== 'idle' && ingestionStatus !== 'complete' && ingestionStatus !== 'error') {
+      setSubmitted(true);
+    }
+  }, [open, ingestionStatus]);
 
   if (!open) return null;
 
@@ -83,6 +159,7 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
         const data = await parseResp(resp);
         if (data.detail) throw new Error(data.detail);
         if (data.error) throw new Error(data.error);
+        currentJobId.current = data.job_id;
         startIngestion(data.job_id);
       } else if (selected === 'link' && linkInput.trim()) {
         const isYT = linkInput.includes('youtube.com') || linkInput.includes('youtu.be');
@@ -98,6 +175,7 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
         const data = await parseResp(resp);
         if (data.detail) throw new Error(data.detail);
         if (data.error) throw new Error(data.error);
+        currentJobId.current = data.job_id;
         startIngestion(data.job_id);
       } else if ((selected === 'file' || selected === 'folder' || selected === 'audio') && fileRef.current?.files?.[0]) {
         const file = fileRef.current.files[0];
@@ -110,6 +188,7 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
         const data = await parseResp(resp);
         if (data.detail) throw new Error(data.detail);
         if (data.error) throw new Error(data.error);
+        currentJobId.current = data.job_id;
         startIngestion(data.job_id);
       }
       setSubmitted(true);
@@ -147,7 +226,7 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.08)' }} onClick={handleClose}>
       <div
-        className="w-full max-w-xl glass-1 rounded-t-3xl px-8 py-7"
+        className="w-full max-w-xl glass-1 rounded-t-3xl px-7 sm:px-9 py-8"
         onClick={(e) => e.stopPropagation()}
         style={{ maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 -8px 40px rgba(107,141,214,0.08)' }}
       >
@@ -338,13 +417,66 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
               </p>
             </div>
 
+            {/* Phase stepper */}
+            {ingestionStatus !== 'complete' && ingestionStatus !== 'error' && (
+              <div className="flex items-center gap-0">
+                {(['Parsing', 'Extracting', 'Storing'] as const).map((stepLabel, idx) => {
+                  const phaseOrder: Record<string, number> = { parsing: 0, extracting: 1, storing: 2 };
+                  const currentOrder = phaseOrder[ingestionStatus] ?? -1;
+                  const isDone = currentOrder > idx;
+                  const isActive = currentOrder === idx;
+                  return (
+                    <div key={stepLabel} className="flex items-center flex-1">
+                      <div className="flex flex-col items-center flex-1">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300"
+                          style={{
+                            background: isDone ? '#96e0b8' : isActive ? 'linear-gradient(135deg, #6b8dd6, #9b6bd6)' : 'rgba(107,141,214,0.12)',
+                            color: isDone || isActive ? '#fff' : 'rgba(30,36,60,0.35)',
+                            boxShadow: isActive ? '0 0 8px rgba(107,141,214,0.45)' : 'none',
+                          }}
+                        >
+                          {isDone ? '✓' : idx + 1}
+                        </div>
+                        <span
+                          className="text-[10px] mt-1 transition-all duration-300"
+                          style={{
+                            color: isActive ? 'rgba(30,36,60,0.85)' : isDone ? '#5cb88a' : 'rgba(30,36,60,0.35)',
+                            fontWeight: isActive ? 600 : 400,
+                            fontFamily: "'DM Sans', sans-serif",
+                          }}
+                        >
+                          {stepLabel}
+                        </span>
+                      </div>
+                      {idx < 2 && (
+                        <div
+                          className="h-[1.5px] flex-1 mb-4 transition-all duration-500"
+                          style={{ background: isDone ? '#96e0b8' : 'rgba(107,141,214,0.15)' }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Progress bar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[12px]">
                 <span className="font-medium text-text-secondary" style={{ fontFamily: "'DM Sans', sans-serif" }}>
                   {ingestionStatus === 'complete' ? 'Done!' : phase || 'Starting...'}
                 </span>
-                <span className="text-text-muted">{Math.round(ingestionProgress)}%</span>
+                <span className="text-text-muted tabular-nums flex items-center gap-2">
+                  <span>{Math.round(ingestionProgress)}%</span>
+                  {ingestionStatus !== 'complete' && ingestionStatus !== 'error' && elapsed > 0 && (
+                    <span className="text-[11px]">
+                      {estimateRemaining(ingestionProgress, elapsed) !== null
+                        ? `~${formatTime(estimateRemaining(ingestionProgress, elapsed)!)} left`
+                        : `${formatTime(elapsed)} elapsed`}
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="h-2 rounded-full glass-3 overflow-hidden">
                 <div
@@ -436,3 +568,4 @@ export default function BottomSheet({ open, onClose }: BottomSheetProps) {
     </div>
   );
 }
+

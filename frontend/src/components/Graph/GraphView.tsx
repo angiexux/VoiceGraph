@@ -375,7 +375,7 @@ export default function GraphView({ showingFull, totalNodes, onToggleFull }: {
         nodeRelSize={5}
         enableNodeDrag={true}
         nodeColor={getNodeColor}
-        backgroundColor="#e8e4f0"
+        backgroundColor="#eaecf5"
         nodeThreeObject={nodeThreeObject}
         nodeThreeObjectExtend={true}
         onNodeClick={handleNodeClick}
@@ -398,8 +398,8 @@ export default function GraphView({ showingFull, totalNodes, onToggleFull }: {
         linkHoverPrecision={2}
         d3AlphaDecay={0.01}
         d3VelocityDecay={0.2}
-        warmupTicks={80}
-        cooldownTicks={300}
+        warmupTicks={48}
+        cooldownTicks={180}
         onEngineStop={() => {
           if (!hasZoomed.current && fgRef.current) {
             fgRef.current.zoomToFit(400, 80);

@@ -23,7 +23,7 @@ export default function TopBar(props: TopBarProps) {
   const toggleTypeFilter = useGraphStore((s) => s.toggleTypeFilter);
 
   return (
-    <nav className="glass-1 flex items-center justify-between px-4 h-full gap-3">
+    <nav className="glass-1 flex items-center justify-between px-6 h-full gap-3">
       {/* Left: Logo */}
       <div className="flex items-center gap-2 shrink-0">
         <div

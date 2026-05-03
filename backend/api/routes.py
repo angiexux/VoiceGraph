@@ -424,6 +424,7 @@ async def ingest_document(
 
     job = job_manager.create_job(source_type=body.source_type, source_preview=body.source[:200])
 
+    ingest_meta = {**(body.options or {}), "source_type": body.source_type}
     background_tasks.add_task(
         _run_ingestion_task,
         job.id,
@@ -433,6 +434,7 @@ async def ingest_document(
         neo4j_client,
         ontology_manager,
         broadcast_fn,
+        ingest_meta,
     )
 
     return IngestResponse(job_id=job.id, status="started")
@@ -444,6 +446,7 @@ async def ingest_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     source_type: str = Form(default="pdf"),
+    collection_name: str = Form(default=""),
 ):
     """Ingest a PDF file upload into the knowledge graph."""
     import tempfile, os
@@ -461,6 +464,10 @@ async def ingest_file(
 
     job = job_manager.create_job(source_type=source_type, source_preview=file.filename or "uploaded file")
 
+    file_meta: dict[str, Any] = {"source_type": source_type}
+    if collection_name.strip():
+        file_meta["collection_name"] = collection_name.strip()
+
     background_tasks.add_task(
         _run_ingestion_task,
         job.id,
@@ -470,6 +477,7 @@ async def ingest_file(
         neo4j_client,
         ontology_manager,
         broadcast_fn,
+        file_meta,
     )
 
     return IngestResponse(job_id=job.id, status="started")
@@ -483,6 +491,7 @@ async def _run_ingestion_task(
     neo4j_client,
     ontology_manager,
     broadcast_fn,
+    metadata: dict[str, Any] | None = None,
 ) -> None:
     """Wrapper that runs the async ingestion in the existing event loop."""
     await run_ingestion(
@@ -493,6 +502,7 @@ async def _run_ingestion_task(
         neo4j_client=neo4j_client,
         ontology_manager=ontology_manager,
         broadcast_fn=broadcast_fn,
+        metadata=metadata,
     )
 
 

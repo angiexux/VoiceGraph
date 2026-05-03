@@ -14,6 +14,8 @@ interface IngestionState {
   totalChunks: number;
   status: 'idle' | 'parsing' | 'extracting' | 'storing' | 'complete' | 'error';
   error: string | null;
+  /** Set when a job starts (for elapsed-time UI). */
+  startedAt: number | null;
   entityLog: { name: string; type: string; timestamp: number }[];
 
   startIngestion: (jobId: string) => void;
@@ -48,6 +50,7 @@ export const useIngestionStore = create<IngestionState>((set) => ({
   totalChunks: 0,
   status: 'idle',
   error: null,
+  startedAt: null,
   entityLog: [],
 
   startIngestion: (jobId) =>
@@ -65,6 +68,7 @@ export const useIngestionStore = create<IngestionState>((set) => ({
       totalChunks: 0,
       status: 'parsing',
       error: null,
+      startedAt: Date.now(),
       entityLog: [],
     }),
 
@@ -128,6 +132,7 @@ export const useIngestionStore = create<IngestionState>((set) => ({
       totalChunks: 0,
       status: 'idle',
       error: null,
+      startedAt: null,
       entityLog: [],
     }),
 }));

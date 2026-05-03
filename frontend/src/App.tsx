@@ -16,6 +16,7 @@ import ActivityPanel from './components/ActivityPanel/ActivityPanel';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useAudioPlayback } from './hooks/useAudioPlayback';
 import { useGraphStore } from './stores/graphStore';
+import { useIngestionStore } from './stores/ingestionStore';
 
 
 export type View = 'graph' | 'query' | 'ontology' | 'mind' | 'wiki';
@@ -40,14 +41,33 @@ function parseGraphResponse(data: any) {
 
 /** Fetch top-50 summary (default) or full graph. */
 async function fetchAndLoadGraph(full = false): Promise<{ nodeCount: number; totalNodes: number }> {
-  const url = full ? '/api/graph' : '/api/graph/summary';
-  const resp = await fetch(url);
-  const data = await resp.json();
-  if (!data.nodes?.length) return { nodeCount: 0, totalNodes: data.total_nodes || 0 };
+  const loadUrl = async (url: string) => {
+    const resp = await fetch(url);
+    return resp.json() as Promise<{
+      nodes?: unknown[];
+      edges?: unknown[];
+      total_nodes?: number;
+    }>;
+  };
+
+  let data = await loadUrl(full ? '/api/graph' : '/api/graph/summary');
+  const reportedTotal = typeof data.total_nodes === 'number' ? data.total_nodes : undefined;
+
+  // Summary can omit low-centrality nodes; if DB has data but summary is empty, load full graph once.
+  if (!full && !data.nodes?.length && (reportedTotal ?? 0) > 0) {
+    data = await loadUrl('/api/graph');
+  }
+
+  if (!data.nodes?.length) {
+    return { nodeCount: 0, totalNodes: reportedTotal ?? 0 };
+  }
 
   const { nodes, edges } = parseGraphResponse(data);
   useGraphStore.getState().setGraph(nodes, edges);
-  return { nodeCount: nodes.length, totalNodes: data.total_nodes || nodes.length };
+  return {
+    nodeCount: nodes.length,
+    totalNodes: reportedTotal ?? (data as { total_nodes?: number }).total_nodes ?? nodes.length,
+  };
 }
 
 function App() {
@@ -65,6 +85,24 @@ function App() {
   const [chatText, setChatText] = useState('');
   const [showingFull, setShowingFull] = useState(false);
   const [totalNodes, setTotalNodes] = useState(0);
+  const [successToast, setSuccessToast] = useState<{ entities: number; rels: number } | null>(null);
+
+  const ingestionStatus = useIngestionStore((s) => s.status);
+  const ingestionEntities = useIngestionStore((s) => s.entitiesFound);
+  const ingestionRels = useIngestionStore((s) => s.relationshipsFound);
+
+  // Show success toast when ingestion completes, then refresh graph
+  const prevStatusRef = useRef<string>('idle');
+  useEffect(() => {
+    if (prevStatusRef.current !== 'complete' && ingestionStatus === 'complete') {
+      setSuccessToast({ entities: ingestionEntities, rels: ingestionRels });
+      // Refresh graph with new data
+      fetchAndLoadGraph(showingFull).then(({ totalNodes: t }) => setTotalNodes(t)).catch(() => {});
+      const timer = setTimeout(() => setSuccessToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+    prevStatusRef.current = ingestionStatus;
+  }, [ingestionStatus, ingestionEntities, ingestionRels, showingFull]);
 
   const handleChatSubmit = useCallback(() => {
     const trimmed = chatText.trim();
@@ -115,8 +153,8 @@ function App() {
         gridTemplateAreas: hasRight
           ? `"nav nav nav" "left main right" "bar bar bar"`
           : `"nav nav" "left main" "bar bar"`,
-        gap: '8px',
-        padding: '10px',
+        gap: '10px',
+        padding: '14px 16px 16px',
         zIndex: 1,
       }}
     >
@@ -173,20 +211,31 @@ function App() {
       {/* ─── Bottom bar ─── */}
       <div
         style={{ gridArea: 'bar' }}
-        className="glass-1 flex items-center gap-3 px-4 rounded-xl"
+        className="glass-1 flex items-center gap-3 px-5 py-2.5 rounded-xl"
       >
-        {/* Add source button */}
+        {/* Add source button — shows live ingestion indicator when active */}
         <button
           onClick={() => setShowIngest(true)}
-          className="shrink-0 h-9 w-9 rounded-xl flex items-center justify-center glass-3 hover:bg-white/60 transition-all"
+          className="shrink-0 h-9 w-9 rounded-xl flex items-center justify-center glass-3 hover:bg-white/60 transition-all relative"
           style={{
             fontSize: 18,
-            color: 'rgba(30,36,60,0.50)',
-            border: '1px solid rgba(180,200,230,0.25)',
+            color: ingestionStatus !== 'idle' && ingestionStatus !== 'complete' && ingestionStatus !== 'error'
+              ? '#6b8dd6'
+              : 'rgba(30,36,60,0.50)',
+            border: ingestionStatus !== 'idle' && ingestionStatus !== 'complete' && ingestionStatus !== 'error'
+              ? '1px solid rgba(107,141,214,0.45)'
+              : '1px solid rgba(180,200,230,0.25)',
           }}
-          title="Add source"
+          title={ingestionStatus !== 'idle' ? 'View ingestion progress' : 'Add source'}
         >
-          +
+          {ingestionStatus !== 'idle' && ingestionStatus !== 'complete' && ingestionStatus !== 'error' ? '⏳' : '+'}
+          {/* Pulsing ring when active */}
+          {ingestionStatus !== 'idle' && ingestionStatus !== 'complete' && ingestionStatus !== 'error' && (
+            <span
+              className="absolute inset-0 rounded-xl"
+              style={{ animation: 'pulse-ring 1.5s ease-out infinite', border: '2px solid rgba(107,141,214,0.4)' }}
+            />
+          )}
         </button>
 
         {/* Text input */}
@@ -259,6 +308,37 @@ function App() {
 
       {/* Bottom sheet */}
       <BottomSheet open={showIngest} onClose={() => setShowIngest(false)} />
+
+      {/* ─── Success toast ─── */}
+      {successToast && (
+        <div
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl"
+          style={{
+            background: 'rgba(245,252,248,0.95)',
+            border: '1.5px solid rgba(96,200,148,0.35)',
+            boxShadow: '0 8px 32px rgba(96,200,148,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+            backdropFilter: 'blur(12px)',
+            animation: 'slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <span style={{ fontSize: 20 }}>✅</span>
+          <div>
+            <p className="text-[13px] font-semibold" style={{ color: 'rgba(20,80,50,0.9)' }}>
+              Document processed successfully!
+            </p>
+            <p className="text-[11px]" style={{ color: 'rgba(20,80,50,0.6)' }}>
+              {successToast.entities} entities · {successToast.rels} relationships added to your graph
+            </p>
+          </div>
+          <button
+            onClick={() => setSuccessToast(null)}
+            style={{ color: 'rgba(20,80,50,0.4)', fontSize: 16, marginLeft: 4 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }

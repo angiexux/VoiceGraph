@@ -95,6 +95,11 @@ export function useWebSocket(onAudioChunk?: (base64Data: string) => void) {
             } else if (data.status === 'error') {
               ingState.setError(data.error || 'Unknown error');
             } else {
+              const raw = data.status as string;
+              const uiStatus =
+                raw === 'started' ? 'parsing'
+                : raw.startsWith('extracting') ? 'extracting'
+                : raw;
               ingState.updateProgress({
                 phase: data.phase || data.status,
                 detail: data.detail || '',
@@ -105,7 +110,7 @@ export function useWebSocket(onAudioChunk?: (base64Data: string) => void) {
                 latestType: data.latest_type,
                 chunk: data.chunk,
                 totalChunks: data.total_chunks,
-                status: data.status,
+                status: uiStatus,
               });
             }
             break;

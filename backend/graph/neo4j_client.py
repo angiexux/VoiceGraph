@@ -185,30 +185,25 @@ class Neo4jClient:
         if not self._available:
             return {"nodes": _SAMPLE_NODES, "edges": _SAMPLE_EDGES}
 
-        cypher = (
-            "MATCH (n) "
-            "OPTIONAL MATCH (n)-[r]->(m) "
-            "RETURN n, r, m "
-            "LIMIT $limit"
-        )
-        async with self._driver.session(database="neo4j") as session:
-            result = await session.run(cypher, {"limit": limit})
-            records = [record async for record in result]
-
         nodes_map: dict[str, dict] = {}
         edges_list: list[dict] = []
 
-        for record in records:
-            n = record.get("n")
-            r = record.get("r")
-            m = record.get("m")
+        async with self._driver.session(database="neo4j") as session:
+            # Two queries — a single OPTIONAL MATCH + LIMIT row-cap loses nodes/edges on large graphs.
+            n_result = await session.run("MATCH (n) RETURN n LIMIT $limit", {"limit": limit})
+            async for record in n_result:
+                n = record.get("n")
+                if n is not None and n.element_id not in nodes_map:
+                    nodes_map[n.element_id] = _node_dict(n)
 
-            if n is not None and n.element_id not in nodes_map:
-                nodes_map[n.element_id] = _node_dict(n)
-            if m is not None and m.element_id not in nodes_map:
-                nodes_map[m.element_id] = _node_dict(m)
-            if r is not None:
-                edges_list.append(_rel_dict(r))
+            r_result = await session.run(
+                "MATCH ()-[r]->() RETURN r LIMIT $limit",
+                {"limit": max(limit * 2, limit)},
+            )
+            async for record in r_result:
+                r = record.get("r")
+                if r is not None:
+                    edges_list.append(_rel_dict(r))
 
         return {"nodes": list(nodes_map.values()), "edges": edges_list}
 

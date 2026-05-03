@@ -6,6 +6,26 @@ This file is the shared work log for the team. Every Claude Code session and man
 
 ---
 
+## Session 8 — 2026-05-02 — Ingest rendering, graph fetch, UI spacing, latency tweaks
+
+**Who:** Claude Code  
+**Duration:** ~1 session
+
+### What was done:
+- **File ingest → graph:** Fixed plain-text/Markdown uploads routing through `parse_text` with a temp **file path** (was treating the path string as document content). Clear errors for `folder`/`audio` until those parsers exist.
+- **Neo4j `get_full_graph`:** Replaced single `OPTIONAL MATCH … LIMIT` (could truncate nodes/edges on larger graphs) with separate bounded queries for nodes and relationships.
+- **REST ingest:** `POST /api/ingest` now forwards `options` as pipeline metadata; `POST /api/ingest/file` accepts `collection_name` (Form) and passes metadata.
+- **Frontend graph load:** After ingestion, if `/api/graph/summary` returns no rows but `total_nodes > 0`, automatically falls back to `/api/graph` once.
+- **Ingestion store:** Added `startedAt` for BottomSheet elapsed-time UI (was undefined).
+- **Polling / perceived latency:** Job poll interval 2s → 1s; normalized job statuses (`started`, `extracting_*`) for the stepper; WebSocket ingestion events use the same mapping.
+- **UI spacing:** Increased app grid padding/gap, bottom bar padding, TopBar horizontal padding, BottomSheet padding; slightly faster force-graph warmup/cooldown.
+
+### Open items:
+- Zip folder and audio ingestion remain stubs (explicit error messages).
+- End-to-end verify with real Neo4j + PDF/TXT upload.
+
+---
+
 ## Session 6 — 2026-03-28 — Real Extraction Pipeline, UI Overhaul, Git Setup
 
 **Who:** Claude Code

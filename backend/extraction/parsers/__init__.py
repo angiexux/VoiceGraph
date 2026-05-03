@@ -6,6 +6,7 @@ Routes to the correct parser based on source type and returns clean text.
 from __future__ import annotations
 
 import logging
+import os
 
 from .pdf_parser import parse_pdf
 from .url_parser import parse_url
@@ -46,6 +47,15 @@ async def parse_document(source: str, source_type: str) -> str:
     """
     source_type = source_type.lower().strip()
 
+    if source_type in ("folder", "zip"):
+        raise ValueError(
+            "ZIP/folder ingestion is not wired yet. Please extract files and upload PDF, DOCX, or TXT."
+        )
+    if source_type == "audio":
+        raise ValueError(
+            "Audio transcription is not configured. Paste a transcript or upload a text/PDF file."
+        )
+
     # Auto-detect from source string if type is "auto"
     if source_type == "auto":
         if source.endswith(".pdf"):
@@ -72,5 +82,14 @@ async def parse_document(source: str, source_type: str) -> str:
             f"Supported types: {', '.join(PARSER_MAP)}"
         )
 
+    # REST file uploads pass a filesystem path; plain-text parser expects content, not a path.
+    parse_arg = source
+    if parser is parse_text and os.path.isfile(source):
+        try:
+            with open(source, encoding="utf-8", errors="replace") as fh:
+                parse_arg = fh.read()
+        except OSError as exc:
+            raise ValueError(f"Could not read text file: {exc}") from exc
+
     logger.info("Parsing document with %s parser", source_type)
-    return await parser(source)
+    return await parser(parse_arg)
